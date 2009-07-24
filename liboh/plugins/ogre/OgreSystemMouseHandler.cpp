@@ -49,6 +49,7 @@
 #include <task/EventManager.hpp>
 #include <SDL_keysym.h>
 #include <set>
+#include <oh/BulletSystem.hpp>
 
 namespace Sirikata {
 namespace Graphics {
@@ -669,7 +670,7 @@ private:
         ProxyCameraObject* camera = dynamic_cast<ProxyCameraObject*>(pp);
         ProxyLightObject* light = dynamic_cast<ProxyLightObject*>(pp);
         ProxyMeshObject* mesh = dynamic_cast<ProxyMeshObject*>(pp);
-
+    
         double x,y,z;
         std::string w("");
         /// if feasible, use Eulers: (not feasible == potential gymbal confusion)
@@ -696,7 +697,7 @@ private:
             fprintf(fp, "light,%s,,%f,%f,%f,%f,%f,%f,%s,,,,,,,,,,",typestr,
                     loc.getPosition().x,loc.getPosition().y,loc.getPosition().z,
                     x,y,z,w.c_str());
-
+    
             fprintf(fp, "%f,%f,%f,%f,%f,%f,%f,%f,%lf,%f,%f,%f,%f,%f,%f,%f,%d\n",
                     linfo.mDiffuseColor.x,linfo.mDiffuseColor.y,linfo.mDiffuseColor.z,ambientPower,
                     linfo.mSpecularColor.x,linfo.mSpecularColor.y,linfo.mSpecularColor.z,shadowPower,
@@ -712,17 +713,29 @@ private:
             }
             const physicalParameters &phys = mesh->getPhysical();
             std::string subtype;
-            if (phys.mode==0) subtype="graphiconly";
-            else if (phys.mode==1) subtype="staticmesh";
-            else if (phys.mode==2) subtype="dynamicbox";
-            else if (phys.mode==3) subtype="dynamicsphere";
-            else {
+            switch (phys.mode) {
+            case bulletObj::Disabled:
+                subtype="graphiconly";
+                break;
+            case bulletObj::Static:
+                subtype="staticmesh";
+                break;
+            case bulletObj::DynamicBox:
+                subtype="dynamicbox";
+                break;
+            case bulletObj::DynamicSphere:
+                subtype="dynamicsphere";
+                break;
+            case bulletObj::DynamicCylinder:
+                subtype="dynamiccylinder";
+                break;
+            default:
                 std::cout << "unknown physical mode! " << phys.mode << std::endl;
             }
             fprintf(fp, "mesh,%s,%s,%f,%f,%f,%f,%f,%f,%s,",subtype.c_str(),phys.name.c_str(),
                     loc.getPosition().x,loc.getPosition().y,loc.getPosition().z,
                     x,y,z,w.c_str());
-
+    
             fprintf(fp, "%f,%f,%f,%f,%f,%f,%d,%d,%s\n",
                     mesh->getScale().x,mesh->getScale().y,mesh->getScale().z, phys.density,
                     phys.friction, phys.bounce, phys.colMask, phys.colMsg, uristr.c_str());
@@ -730,15 +743,15 @@ private:
         else if (camera) {
             fprintf(fp, "camera,,,%f,%f,%f,%f,%f,%f,%s\n",
                     loc.getPosition().x,loc.getPosition().y,loc.getPosition().z,
-                                    x,y,z,w.c_str());
+                    x,y,z,w.c_str());
         }
         else {
             fprintf(fp, "#unknown object type in dumpObject\n");
         }
     }
-
+    
     ///////////////// DEVICE FUNCTIONS ////////////////
-
+    
     SubscriptionId registerAxisListener(const InputDevicePtr &dev,
                                         EventResponse(MouseHandler::*func)(EventPtr),
                                         int axis) {
@@ -750,7 +763,7 @@ private:
         mDeviceSubscriptions.insert(DeviceSubMap::value_type(&*dev, subId));
         return subId;
     }
-
+    
     SubscriptionId registerButtonListener(const InputDevicePtr &dev,
                                           EventResponse(MouseHandler::*func)(EventPtr),
                                           int button, bool released=false, InputDevice::Modifier mod=0) {

@@ -275,29 +275,25 @@ class DemoProxyManager :public ProxyManager {
             else if (objtype=="mesh") {
                 int mode=0;
                 double density=0.0;
-                double friction=0.0;
-                double bounce=0.0;
+                friction = str2dbl(row["friction"]);
+                bounce = str2dbl(row["bounce"]);
+                density = str2dbl(row["density"]);
                 if (row["subtype"] == "staticmesh") {
                     mode=bulletObj::Static;
-                    friction = str2dbl(row["friction"]);
-                    bounce = str2dbl(row["bounce"]);
                 }
                 else if (row["subtype"] == "dynamicbox") {
                     mode=bulletObj::DynamicBox;
-                    density = str2dbl(row["density"]);
-                    friction = str2dbl(row["friction"]);
-                    bounce = str2dbl(row["bounce"]);
+                }
+                else if (row["subtype"] == "dynamiccylinder") {
+                    mode=bulletObj::DynamicCylinder;
                 }
                 else if (row["subtype"] == "dynamicsphere") {
                     mode=bulletObj::DynamicSphere;
-                    density = str2dbl(row["density"]);
-                    friction = str2dbl(row["friction"]);
-                    bounce = str2dbl(row["bounce"]);
                 }
                 else if (row["subtype"] == "graphiconly") {
                 }
                 else {
-                    cout << "parse csv error: unknown mesh subtype:" << row["subtype"] << endl;
+                    cout << "parse csv error: unknown  mash subtype:" << row["subtype"] << endl;
                     assert(false);
                 }
                 string meshURI = row["meshURI"];
