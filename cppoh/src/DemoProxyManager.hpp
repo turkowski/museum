@@ -55,7 +55,8 @@ class DemoProxyManager :public ProxyManager {
     ProxyObjectPtr addMeshObject(const Transfer::URI &uri, const Location &location,
                                  const Vector3f &scale=Vector3f(1,1,1),
                                  const int mode=0, const float density=0.f, const float friction=0.f, 
-                                 const float bounce=0.f, const string name="", const int colMask=0, const int colMsg=0) {
+                                 const float bounce=0.f,  const Vector3f &hull=Vector3f(1,1,1),
+                                 const string name="", const int colMask=0, const int colMsg=0) {
         // parentheses around arguments required to resolve function/constructor ambiguity. This is ugly.
         SpaceObjectReference myId((SpaceID(UUID::null())),(ObjectReference(UUID::random())));
         //std::cout << "Add Mesh Object " << myId << " = " << uri << " mode: " << mode << std::endl;
@@ -73,6 +74,7 @@ class DemoProxyManager :public ProxyManager {
         pp.name = name;
         pp.colMask = colMask;
         pp.colMsg = colMsg;
+        pp.hull = hull;
         myObj->setPhysical(pp);             /// always do this to ensure parameters are valid
         return myObj;
     }
@@ -175,6 +177,7 @@ class DemoProxyManager :public ProxyManager {
         Vector3d pos(0,0,0);
         Quaternion orient(Quaternion::identity());
         Vector3f scale(1,1,1);
+        Vector3f hull(1,1,1);
         float density=0;
         float friction=0;
         float bounce=0;
@@ -210,6 +213,13 @@ class DemoProxyManager :public ProxyManager {
             scale.x = str2dbl(row["scale_x"]);
             scale.y = str2dbl(row["scale_y"]);
             scale.z = str2dbl(row["scale_z"]);
+            if (row["hull_x"] != string("")) {
+                hull.x = str2dbl(row["hull_x"]);
+                hull.y = str2dbl(row["hull_y"]);
+                hull.z = str2dbl(row["hull_z"]);
+            }
+            
+            cout << "dbm debug: " << row["name"] << " hull: " << hull << endl;
 
             if (objtype=="camera") {
                 mCamera->resetPositionVelocity(Time::now(), location);
@@ -304,7 +314,7 @@ class DemoProxyManager :public ProxyManager {
                 string name = row["name"];
                 int colMask = str2int(row["colMask"]);
                 int colMsg = str2int(row["colMsg"]);
-                addMeshObject(Transfer::URI(meshURI), location, scale, mode, density, friction, bounce, 
+                addMeshObject(Transfer::URI(meshURI), location, scale, mode, density, friction, bounce, hull,
                               name, colMask, colMsg);
             }
             else {

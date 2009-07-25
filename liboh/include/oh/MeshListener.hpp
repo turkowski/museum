@@ -46,6 +46,7 @@ struct physicalParameters {
     float bounce;
     int colMask;
     int colMsg;
+    Vector3f hull;
 };
 
 class SIRIKATA_OH_EXPORT MeshListener {
