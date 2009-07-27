@@ -242,7 +242,9 @@ private:
             return EventResponse::nop();
         }
         if (ev->mAxis == SDLMouse::WHEELY || ev->mAxis == SDLMouse::RELY) {
-            zoomInOut(ev->mValue, ev->getDevice(), mParent->mPrimaryCamera, mSelectedObjects, mParent);
+			AxisValue av = ev->mValue;
+			av.value *= 0.2;
+            zoomInOut(av, ev->getDevice(), mParent->mPrimaryCamera, mSelectedObjects, mParent);
         }
         else if (ev->mAxis == SDLMouse::WHEELX || ev->mAxis == PointerDevice::RELX) {
             //orbitObject(Vector3d(ev->mValue.getCentered() * AXIS_TO_RADIANS, 0, 0), ev->getDevice());
@@ -523,6 +525,8 @@ private:
     }
     
     EventResponse moveHandler(EventPtr ev) {
+        float angSpeed;
+        Vector3f velocity;
         Vector3f yawAxis;
         float WORLD_SCALE = mParent->mInputManager->mWorldScale->as<float>();
         Task::AbsTime now(Task::AbsTime::now());
@@ -555,41 +559,73 @@ private:
         case SDL_SCANCODE_DOWN:
             amount*=-1;
         case SDL_SCANCODE_UP:
+            angSpeed = 0;
+            velocity = Vector3f(0,0,0);
+            /// fwd, but also if CTL: pan left, ALT: pan right
+            /// SHIFT: pan up, SHIFT+CTL: pan down
+            if (!mParent->mInputManager->isModifierDown(InputDevice::MOD_SHIFT)) {
+                if ( (mParent->mInputManager->isModifierDown(InputDevice::MOD_CTRL)) ||
+                        (mParent->mInputManager->isModifierDown(InputDevice::MOD_ALT)) ) {
+                    int oldamt = amount;
+                    if (mParent->mInputManager->isModifierDown(InputDevice::MOD_ALT)) {
+                        amount *= -1;
+                    }
+                    /// AngularSpeed needs a relative axis, so compute the global Y axis (yawAxis) in local frame
+                    double p, r, y;
+                    quat2Euler(loc.getOrientation(), p, r, y);
+                    yawAxis.x = 0;
+                    yawAxis.y = std::cos(p*DEG2RAD);
+                    yawAxis.z = -std::sin(p*DEG2RAD);
+                    loc.setAxisOfRotation(yawAxis);
+                    angSpeed=buttonev->mPressed?amount:0;
+                    amount = oldamt;
+                }
+            }
             amount *= 0.5;
             if (mParent->mInputManager->isModifierDown(InputDevice::MOD_SHIFT)) {
+                if (mParent->mInputManager->isModifierDown(InputDevice::MOD_CTRL)) {
+                    amount *= -1;
+                }
                 loc.setAxisOfRotation(Vector3f(1,0,0));
-                loc.setAngularSpeed(buttonev->mPressed?amount:0);
-                loc.setVelocity(Vector3f(0,0,0));
+                angSpeed=buttonev->mPressed?amount:0;
             }
             else {
                 amount *= WORLD_SCALE;
-                loc.setVelocity(direction(orient)*amount);
-                loc.setAngularSpeed(0);
+                velocity = direction(orient)*amount;
             }
+            loc.setAngularSpeed(angSpeed);
+            loc.setVelocity(velocity);
             break;
         case SDL_SCANCODE_PAGEDOWN:
             amount*=-1;
         case SDL_SCANCODE_PAGEUP:
             amount *= 0.25;
             amount *= WORLD_SCALE;
-            std::cout << "dbm debug PAGEUP amount: " << amount << std::endl;
             loc.setVelocity(Vector3f(0,1,0)*amount);
             loc.setAngularSpeed(0);
             break;
         case SDL_SCANCODE_RIGHT:
             amount*=-1;
         case SDL_SCANCODE_LEFT:
-            if (mParent->mInputManager->isModifierDown(InputDevice::MOD_SHIFT)) amount *= 0.25;
-            /// AngularSpeed needs a relative axis, so compute the global Y axis (yawAxis) in local frame
-            double p, r, y;
-            quat2Euler(loc.getOrientation(), p, r, y);
-            yawAxis.x = 0;
-            yawAxis.y = std::cos(p*DEG2RAD);
-            yawAxis.z = -std::sin(p*DEG2RAD);
-            loc.setAxisOfRotation(yawAxis);
-            loc.setAngularSpeed(buttonev->mPressed?amount:0);
-            loc.setVelocity(Vector3f(0,0,0));
-            break;
+            /// default: strafe.  SHIFT: pan (turn your head)
+            if (mParent->mInputManager->isModifierDown(InputDevice::MOD_SHIFT)) {
+                /// AngularSpeed needs a relative axis, so compute the global Y axis (yawAxis) in local frame
+                double p, r, y;
+                quat2Euler(loc.getOrientation(), p, r, y);
+                yawAxis.x = 0;
+                yawAxis.y = std::cos(p*DEG2RAD);
+                yawAxis.z = -std::sin(p*DEG2RAD);
+                loc.setAxisOfRotation(yawAxis);
+                loc.setAngularSpeed(buttonev->mPressed?amount:0);
+                loc.setVelocity(Vector3f(0,0,0));
+                break;
+            }
+            else {
+                amount *= WORLD_SCALE*-.25;
+                loc.setVelocity(orient.xAxis()*amount);
+                loc.setAngularSpeed(0);
+                break;
+            }
         default:
             break;
         }
@@ -803,6 +839,10 @@ private:
         case SDL_SCANCODE_Y:
             mDragAction[1] = DragActionRegistry::get("panCamera");
             break;
+        case SDL_SCANCODE_P:
+            /// not a dragmode, but whatever -- it does what we want
+            mParent->mDisablePhysics = !mParent->mDisablePhysics;
+            break;
         }
         return EventResponse::nop();
     }
@@ -842,6 +882,14 @@ private:
                 registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDL_SCANCODE_UP);
                 registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDL_SCANCODE_UP, true, InputDevice::MOD_SHIFT);
                 registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDL_SCANCODE_UP, false, InputDevice::MOD_SHIFT);
+                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDL_SCANCODE_UP, true,
+                                       InputDevice::MOD_SHIFT|InputDevice::MOD_CTRL);
+                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDL_SCANCODE_UP, false,
+                                       InputDevice::MOD_SHIFT|InputDevice::MOD_CTRL);
+                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDL_SCANCODE_UP, true, InputDevice::MOD_ALT);
+                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDL_SCANCODE_UP, false, InputDevice::MOD_ALT);
+                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDL_SCANCODE_UP, true, InputDevice::MOD_CTRL);
+                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDL_SCANCODE_UP, false, InputDevice::MOD_CTRL);
                 registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDL_SCANCODE_DOWN);
                 registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDL_SCANCODE_DOWN, true, InputDevice::MOD_SHIFT);
                 registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDL_SCANCODE_DOWN, false, InputDevice::MOD_SHIFT);
@@ -849,7 +897,7 @@ private:
                 registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDL_SCANCODE_LEFT, true, InputDevice::MOD_SHIFT);
                 registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDL_SCANCODE_LEFT, false, InputDevice::MOD_SHIFT);
                 registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDL_SCANCODE_RIGHT);
-                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDL_SCANCODE_RIGHT, false, InputDevice::MOD_SHIFT);
+                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDL_SCANCODE_RIGHT, true, InputDevice::MOD_SHIFT);
                 registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDL_SCANCODE_RIGHT, false, InputDevice::MOD_SHIFT);
                 registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDL_SCANCODE_W,true, InputDevice::MOD_SHIFT);
                 registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDL_SCANCODE_A,true, InputDevice::MOD_SHIFT);
@@ -868,6 +916,7 @@ private:
                 registerButtonListener(ev->mDevice, &MouseHandler::setDragMode, SDL_SCANCODE_R);
                 registerButtonListener(ev->mDevice, &MouseHandler::setDragMode, SDL_SCANCODE_T);
                 registerButtonListener(ev->mDevice, &MouseHandler::setDragMode, SDL_SCANCODE_Y);
+                registerButtonListener(ev->mDevice, &MouseHandler::setDragMode, SDL_SCANCODE_P);
             }
             break;
         case InputDeviceEvent::REMOVED: {
@@ -929,9 +978,9 @@ public:
                               MouseDragEvent::getEventId(),
                               std::tr1::bind(&MouseHandler::doDrag, this, _1)));
         mDragAction[1] = 0;
-        mDragAction[2] = DragActionRegistry::get("zoomCamera");
-        mDragAction[3] = DragActionRegistry::get("panCamera");
-        mDragAction[4] = DragActionRegistry::get("rotateCamera");
+        mDragAction[2] = DragActionRegistry::get("panCamera");
+        mDragAction[3] = DragActionRegistry::get("rotateCamera");
+        mDragAction[4] = DragActionRegistry::get("zoomCamera");
 
         mEvents.push_back(mParent->mInputManager->subscribeId(
                               IdPair(MouseClickEvent::getEventId(),

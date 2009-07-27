@@ -123,6 +123,7 @@ class OgreSystem: public TimeSteppedSimulation {
     Ogre::RaySceneQuery* mRayQuery;
     CubeMap *mExternalCubeMap;
     CubeMap *mInternalCubeMap;
+    bool mDisablePhysics;
 public:
     OptionValue *mParallaxSteps;
     OptionValue *mParallaxShadowSteps;
@@ -178,7 +179,8 @@ public:
                      int which=0) const;
     virtual Duration desiredTickRate()const;
     ///returns if rendering should continue
-    virtual bool tick();    
+    virtual bool tick();
+    virtual void getMsg(std::string& s);
     Ogre::RenderTarget *getRenderTarget();
     static Ogre::Root *getRoot();
     Ogre::SceneManager* getSceneManager();

@@ -59,7 +59,6 @@ class DemoProxyManager :public ProxyManager {
                                  const string name="", const int colMask=0, const int colMsg=0) {
         // parentheses around arguments required to resolve function/constructor ambiguity. This is ugly.
         SpaceObjectReference myId((SpaceID(UUID::null())),(ObjectReference(UUID::random())));
-        //std::cout << "Add Mesh Object " << myId << " = " << uri << " mode: " << mode << std::endl;
         std::tr1::shared_ptr<ProxyMeshObject> myObj(new ProxyMeshObject(this, myId));
         mObjects.insert(ObjectMap::value_type(myId, myObj));
         notify(&ProxyCreationListener::createProxy, myObj);
@@ -160,7 +159,6 @@ class DemoProxyManager :public ProxyManager {
     map<string, string>* parse_csv_line(FILE* fil) {
         string line;
         getline(fil, line);
-        //std::cout << "csv: line-->" << line << "<--" << std::endl;
         vector<string> values;
         map<string, string> *row;
         row = (new map<string, string>());
@@ -184,9 +182,7 @@ class DemoProxyManager :public ProxyManager {
 
         /// dbm new way:
         map<string, string>& row = *parse_csv_line(fp);
-        //std::cout << endl;
         if (row["objtype"][0]=='#' || row["objtype"]==string("")) {
-            //cout << "csv: loadSceneObject passing, comment or blank line" << endl;
             return;                                         /// comment or blank line
         }
         else {
@@ -208,7 +204,6 @@ class DemoProxyManager :public ProxyManager {
                 orient.z = bq.getZ();
                 orient.w = bq.getW();
             }
-            //cout << "csv: orient: " << orient.x <<","<< orient.y <<","<< orient.z <<","<< orient.w << endl;
             Location location(pos, orient, Vector3f::nil(), Vector3f::nil(), 0.);
             scale.x = str2dbl(row["scale_x"]);
             scale.y = str2dbl(row["scale_y"]);
@@ -219,11 +214,8 @@ class DemoProxyManager :public ProxyManager {
                 hull.z = str2dbl(row["hull_z"]);
             }
             
-            cout << "dbm debug: " << row["name"] << " hull: " << hull << endl;
-
             if (objtype=="camera") {
                 mCamera->resetPositionVelocity(Time::now(), location);
-                //cout << "csv: added camera to scene" << endl;
             }
             else if (objtype=="light") {
                 LightInfo::LightTypes lighttype;
@@ -280,7 +272,6 @@ class DemoProxyManager :public ProxyManager {
                 }
                 lightInfo.mWhichFields = LightInfo::ALL;
                 addLightObject(lightInfo, location);
-                //cout << "csv: added light to scene" << endl;
             }
             else if (objtype=="mesh") {
                 int mode=0;
@@ -453,7 +444,6 @@ class DemoProxyManager :public ProxyManager {
         else {
             parse_csv_headings(fp);
             while (!feof(fp)) {
-                //std::cout << "csv: loading scene object" << std::endl;
                 loadSceneObject(fp);
             }
         }

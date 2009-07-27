@@ -352,7 +352,6 @@ public:
                 Location loc (ent->extrapolateLocation(now));
                 Vector3d localTrans = mOriginalPosition[i] - avgPos;
                 loc.setPosition(avgPos + localTrans*mTotalScale);
-                std::cout << "debug avgPos: " << avgPos << " localTrans" << localTrans << " scale: " << mTotalScale << std::endl;
                 ent->resetPositionVelocity(now, loc);
                 std::tr1::shared_ptr<ProxyMeshObject> meshptr (
                     std::tr1::dynamic_pointer_cast<ProxyMeshObject>(ent));

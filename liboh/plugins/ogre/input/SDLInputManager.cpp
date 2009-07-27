@@ -250,7 +250,7 @@ bool SDLInputManager::tick(Time currentTime, Duration frameTime){
         {
           case SDL_KEYDOWN:
           case SDL_KEYUP:
-			  SILOG(input,info,"Keyboard "<<(int)event->key.keysym.scancode<<"; modifiers" << modifiersFromSDL(event->key.keysym.mod));
+			  //SILOG(input,info,"Keyboard "<<(int)event->key.keysym.scancode<<"; modifiers" << modifiersFromSDL(event->key.keysym.mod));
             mKeys[event->key.which]->fireButton(
                 mKeys[event->key.which],
                 this, 

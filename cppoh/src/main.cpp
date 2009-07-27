@@ -288,8 +288,12 @@ int main ( int argc,const char**argv ) {
     }
     pm->initialize();
     if ( graphicsSystem ) {
+        std::string msg;
         while ( graphicsSystem->tick() ) {
-            physicsSystem->tick();
+            msg.clear();
+            graphicsSystem->getMsg(msg);
+            if (msg!="disable_physics")            //  should check for other messages?
+                physicsSystem->tick();
         }
     } else {
         SILOG(cppoh,error,"Fatal Error: Unable to load OGRE Graphics plugin. The PATH environment variable is ignored, so make sure you have copied the DLLs from dependencies/ogre/bin/ into the current directory. Sorry about this!");

@@ -41,6 +41,7 @@ public:
     virtual Duration desiredTickRate()const=0;
     ///returns true if simulation should continue (false quits app)
     virtual bool tick()=0;
+    virtual void getMsg(std::string& s)=0;
 };
 
 }
