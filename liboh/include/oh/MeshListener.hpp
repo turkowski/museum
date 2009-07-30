@@ -47,6 +47,15 @@ struct physicalParameters {
     int colMask;
     int colMsg;
     Vector3f hull;
+    physicalParameters() {
+        mode = 0;
+        density = 0;
+        friction = 0;
+        bounce = 0;
+        colMask = 0;
+        colMsg = 0;
+        hull = Vector3f::nil();
+    }
 };
 
 class SIRIKATA_OH_EXPORT MeshListener {

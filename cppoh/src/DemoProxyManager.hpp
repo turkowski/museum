@@ -52,7 +52,7 @@ class DemoProxyManager :public ProxyManager {
     //noncopyable
     DemoProxyManager(const DemoProxyManager&cpy) {}
 
-    ProxyObjectPtr addMeshObject(const Transfer::URI &uri, const Location &location,
+    ProxyPositionObjectPtr addMeshObject(const Transfer::URI &uri, const Location &location,
                                  const Vector3f &scale=Vector3f(1,1,1),
                                  const int mode=0, const float density=0.f, const float friction=0.f, 
                                  const float bounce=0.f,  const Vector3f &hull=Vector3f(1,1,1),
@@ -78,7 +78,7 @@ class DemoProxyManager :public ProxyManager {
         return myObj;
     }
 
-    ProxyObjectPtr addLightObject(const LightInfo &linfo, const Location &location) {
+    ProxyPositionObjectPtr addLightObject(const LightInfo &linfo, const Location &location) {
         // parentheses around arguments required to resolve function/constructor ambiguity. This is ugly.
         SpaceObjectReference myId((SpaceID(UUID::null())),(ObjectReference(UUID::random())));
 
@@ -171,7 +171,7 @@ class DemoProxyManager :public ProxyManager {
         return row;
     }
 
-    void loadSceneObject(FILE *fp) {
+    void loadSceneObject(FILE *fp, map<string, ProxyPositionObjectPtr> &objsByName, std::map<ProxyPositionObjectPtr, string> &objsToParent) {
         Vector3d pos(0,0,0);
         Quaternion orient(Quaternion::identity());
         Vector3f scale(1,1,1);
@@ -213,8 +213,9 @@ class DemoProxyManager :public ProxyManager {
                 hull.y = str2dbl(row["hull_y"]);
                 hull.z = str2dbl(row["hull_z"]);
             }
-            
+            ProxyPositionObjectPtr obj;
             if (objtype=="camera") {
+                obj = mCamera;
                 mCamera->resetPositionVelocity(Time::now(), location);
             }
             else if (objtype=="light") {
@@ -271,7 +272,7 @@ class DemoProxyManager :public ProxyManager {
                     lightInfo.mShadowColor = Vector3f(0,0,0);
                 }
                 lightInfo.mWhichFields = LightInfo::ALL;
-                addLightObject(lightInfo, location);
+                obj = addLightObject(lightInfo, location);
             }
             else if (objtype=="mesh") {
                 int mode=0;
@@ -305,12 +306,22 @@ class DemoProxyManager :public ProxyManager {
                 string name = row["name"];
                 int colMask = str2int(row["colMask"]);
                 int colMsg = str2int(row["colMsg"]);
-                addMeshObject(Transfer::URI(meshURI), location, scale, mode, density, friction, bounce, hull,
+                obj = addMeshObject(Transfer::URI(meshURI), location, scale, mode, density, friction, bounce, hull,
                               name, colMask, colMsg);
             }
-            else {
+            else if (!objtype.empty()) {
                 cout << "parse csv error: illegal object type" << endl;
                 assert(false);
+            }
+            if (obj) {
+                if (!row["name"].empty()) {
+                    if (!objsByName[row["name"]]) {
+                        objsByName[row["name"]] = obj;
+                    }
+                }
+                if (!row["parent"].empty()) {
+                    objsToParent[obj] = row["parent"];
+                }
             }
         }
     }
@@ -443,8 +454,15 @@ class DemoProxyManager :public ProxyManager {
         }
         else {
             parse_csv_headings(fp);
+            map<string, ProxyPositionObjectPtr> namedObjs;
+            map<ProxyPositionObjectPtr, string> parentObjs;
             while (!feof(fp)) {
-                loadSceneObject(fp);
+                loadSceneObject(fp, namedObjs, parentObjs);
+            }
+            for (map<ProxyPositionObjectPtr, string>::iterator iter = parentObjs.begin(); iter != parentObjs.end(); ++iter) {
+                if (namedObjs[iter->second]) {
+                    iter->first->setParent(namedObjs[iter->second], Time::now());
+                }
             }
         }
         fclose(fp);
