@@ -536,6 +536,7 @@ private:
             return EventResponse::nop();
         }
         float amount = buttonev->mPressed?1:0;
+        static float camSpeed = 1.0f;
     
         CameraEntity *cam = mParent->mPrimaryCamera;
         ProxyPositionObjectPtr camProxy = cam->getProxyPtr();
@@ -550,6 +551,7 @@ private:
         case SDL_SCANCODE_S:
             amount*=-1;
         case SDL_SCANCODE_W:
+            amount *= camSpeed;
             amount *= WORLD_SCALE;
             loc.setVelocity(direction(orient)*amount);
             loc.setAngularSpeed(0);
@@ -557,6 +559,7 @@ private:
         case SDL_SCANCODE_A:
             amount*=-1;
         case SDL_SCANCODE_D:
+            amount *= camSpeed;
             amount *= WORLD_SCALE;
             loc.setVelocity(orient.xAxis()*amount);
             loc.setAngularSpeed(0);
@@ -585,8 +588,10 @@ private:
                     angSpeed=buttonev->mPressed?amount:0;
                     amount = oldamt;
                 }
+                else {
+                    amount *= camSpeed;
+                }
             }
-            amount *= 0.5;
             if (mParent->mInputManager->isModifierDown(InputDevice::MOD_SHIFT)) {
                 if (mParent->mInputManager->isModifierDown(InputDevice::MOD_CTRL)) {
                     amount *= -1;
@@ -626,11 +631,20 @@ private:
                 break;
             }
             else {
-                amount *= WORLD_SCALE*-.25;
+                amount *= WORLD_SCALE*-.25*camSpeed;
                 loc.setVelocity(orient.xAxis()*amount);
                 loc.setAngularSpeed(0);
                 break;
             }
+        case SDL_SCANCODE_1:
+            camSpeed=0.25;
+            break;
+        case SDL_SCANCODE_2:
+            camSpeed=1.0;
+            break;
+        case SDL_SCANCODE_3:
+            camSpeed=5.0;
+            break;
         default:
             break;
         }
@@ -882,6 +896,9 @@ private:
                 registerAxisListener(ev->mDevice, &MouseHandler::wheelListener, SDLMouse::WHEELY);
             }
             if (!!(std::tr1::dynamic_pointer_cast<SDLKeyboard>(ev->mDevice))) {
+                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDL_SCANCODE_1);
+                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDL_SCANCODE_2);
+                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDL_SCANCODE_3);
                 registerButtonListener(ev->mDevice, &MouseHandler::groupObjects, SDL_SCANCODE_G);
                 registerButtonListener(ev->mDevice, &MouseHandler::ungroupObjects, SDL_SCANCODE_G,false,InputDevice::MOD_ALT);
                 registerButtonListener(ev->mDevice, &MouseHandler::deleteObjects, SDL_SCANCODE_DELETE);
