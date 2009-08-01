@@ -112,7 +112,7 @@ class OgreSystem::MouseHandler {
     typedef std::set<ProxyPositionObjectPtr> SelectedObjectSet;
     SelectedObjectSet mSelectedObjects;
     SpaceObjectReference mLastShiftSelected;
-
+    int mLastHitCount;
     // map from mouse button to drag for that mouse button.
     /* as far as multiple cursors are concerned,
        each cursor should have its own MouseHandler instance */
@@ -158,13 +158,13 @@ class OgreSystem::MouseHandler {
 
     /////////////////// HELPER FUNCTIONS ///////////////
 
-    Entity *hoverEntity (CameraEntity *cam, Task::AbsTime time, float xPixel, float yPixel, int which=0) {
+    Entity *hoverEntity (CameraEntity *cam, Task::AbsTime time, float xPixel, float yPixel, int *hitCount,int which=0) {
         Location location(cam->getProxy().globalLocation(time));
         Vector3f dir (pixelToDirection(cam, location.getOrientation(), xPixel, yPixel));
         SILOG(input,info,"X is "<<xPixel<<"; Y is "<<yPixel<<"; pos = "<<location.getPosition()<<"; dir = "<<dir);
 
         double dist;
-        Entity *mouseOverEntity = mParent->rayTrace(location.getPosition(), dir, dist, which);
+        Entity *mouseOverEntity = mParent->rayTrace(location.getPosition(), dir, *hitCount, dist, which);
         if (mouseOverEntity) {
             while (!(mouseOverEntity->getProxy().getParent() == mCurrentGroup)) {
                 mouseOverEntity = mParent->getEntity(mouseOverEntity->getProxy().getParent());
@@ -202,11 +202,12 @@ private:
         CameraEntity *camera = mParent->mPrimaryCamera;
         if (mParent->mInputManager->isModifierDown(InputDevice::MOD_SHIFT)) {
             // add object.
-            Entity *mouseOver = hoverEntity(camera, Task::AbsTime::now(), mouseev->mX, mouseev->mY, mWhichRayObject);
+            int numObjectsUnderCursor=0;
+            Entity *mouseOver = hoverEntity(camera, Task::AbsTime::now(), mouseev->mX, mouseev->mY, &numObjectsUnderCursor, mWhichRayObject);
             if (!mouseOver) {
                 return EventResponse::nop();
             }
-            if (mouseOver->id() == mLastShiftSelected) {
+            if (mouseOver->id() == mLastShiftSelected && numObjectsUnderCursor==mLastHitCount) {
                 SelectedObjectSet::iterator selectIter = mSelectedObjects.find(mouseOver->getProxyPtr());
                 if (selectIter != mSelectedObjects.end()) {
                     Entity *ent = mParent->getEntity((*selectIter)->getObjectReference());
@@ -217,8 +218,10 @@ private:
                 }
                 mWhichRayObject+=direction;
                 mLastShiftSelected = SpaceObjectReference::null();
+            }else {
+                mWhichRayObject=0;
             }
-            mouseOver = hoverEntity(camera, Task::AbsTime::now(), mouseev->mX, mouseev->mY, mWhichRayObject);
+            mouseOver = hoverEntity(camera, Task::AbsTime::now(), mouseev->mX, mouseev->mY, &mLastHitCount, mWhichRayObject);
             if (!mouseOver) {
                 return EventResponse::nop();
             }
@@ -250,7 +253,11 @@ private:
             // reset selection.
             clearSelection();
             mWhichRayObject+=direction;
-            Entity *mouseOver = hoverEntity(camera, Task::AbsTime::now(), mouseev->mX, mouseev->mY, mWhichRayObject);
+            int numObjectsUnderCursor=0;
+            Entity *mouseOver = hoverEntity(camera, Task::AbsTime::now(), mouseev->mX, mouseev->mY, &numObjectsUnderCursor, mWhichRayObject);
+            if (numObjectsUnderCursor!=mLastHitCount){
+                mouseOver = hoverEntity(camera, Task::AbsTime::now(), mouseev->mX, mouseev->mY, &mLastHitCount, mWhichRayObject=0);
+            }
             if (mouseOver) {
                 mSelectedObjects.insert(mouseOver->getProxyPtr());
                 mouseOver->setSelected(true);
@@ -1044,6 +1051,7 @@ private:
 
 public:
     MouseHandler(OgreSystem *parent) : mParent(parent), mCurrentGroup(SpaceObjectReference::null()), mWhichRayObject(0) {
+        mLastHitCount=0;
         mEvents.push_back(mParent->mInputManager->registerDeviceListener(
                               std::tr1::bind(&MouseHandler::deviceListener, this, _1)));
 

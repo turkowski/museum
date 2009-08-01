@@ -318,8 +318,8 @@ public:
     ScaleObjectDrag(const DragStartInfo &info)
             : RelativeDrag(info.ev->getDevice()),
             mParent (info.sys),
-            mTotalScale(1.0),
-            mSelectedObjects (info.objects.begin(), info.objects.end()) {
+             mSelectedObjects (info.objects.begin(), info.objects.end()),
+            mTotalScale(1.0) {
         camera = info.camera;
         mOriginalPosition.reserve(mSelectedObjects.size());
         Task::AbsTime now = Task::AbsTime::now();
@@ -391,6 +391,7 @@ class PanCameraDrag : public ActiveDrag {
     Vector3f toMove;
 public:
     PanCameraDrag(const DragStartInfo &info) {
+        int hitCount=0;
         camera = info.camera;
         mParent = info.sys;
         double distance;
@@ -404,7 +405,7 @@ public:
 			float WORLD_SCALE = mParent->getInputManager()->mWorldScale->as<float>();
             mPanDistance = WORLD_SCALE;
 		} else if (!mParent->getInputManager()->isModifierDown(InputDevice::MOD_SHIFT) &&
-				   info.sys->rayTrace(cameraLoc.getPosition(), toMove, distance)) {
+				   info.sys->rayTrace(cameraLoc.getPosition(), toMove, hitCount, distance)) {
             mPanDistance = distance;
         } else if (!info.objects.empty()) {
             Vector3d totalPosition(averageSelectedPosition(now, info.objects.begin(), info.objects.end()));
@@ -443,10 +444,11 @@ void zoomInOut(AxisValue value, const InputDevicePtr &dev, CameraEntity *camera,
                          dev->getAxis(PointerDevice::CURSORY).getCentered()));
     double distance;
     float WORLD_SCALE = parent->getInputManager()->mWorldScale->as<float>();
+    int hitCount=0;
     if (!parent->getInputManager()->isModifierDown(InputDevice::MOD_CTRL) &&
         !parent->getInputManager()->isModifierDown(InputDevice::MOD_SHIFT)) {
         toMove *= WORLD_SCALE;
-    } else if (parent->rayTrace(cameraLoc.getPosition(), direction(cameraLoc.getOrientation()), distance) &&
+    } else if (parent->rayTrace(cameraLoc.getPosition(), direction(cameraLoc.getOrientation()), hitCount, distance) &&
                (distance*.75 < WORLD_SCALE || parent->getInputManager()->isModifierDown(InputDevice::MOD_SHIFT))) {
         toMove *= distance*.75;
     } else if (!objects.empty()) {
