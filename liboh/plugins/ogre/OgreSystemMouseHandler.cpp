@@ -166,7 +166,8 @@ class OgreSystem::MouseHandler {
         SILOG(input,info,"X is "<<xPixel<<"; Y is "<<yPixel<<"; pos = "<<location.getPosition()<<"; dir = "<<dir << "; which=" << which);
 
         double dist;
-        Entity *mouseOverEntity = mParent->rayTrace(location.getPosition(), dir, *hitCount, dist, which);
+        Vector3f normal;
+        Entity *mouseOverEntity = mParent->rayTrace(location.getPosition(), dir, *hitCount, dist, normal, which);
         if (mouseOverEntity) {
             while (!(mouseOverEntity->getProxy().getParent() == mCurrentGroup)) {
                 mouseOverEntity = mParent->getEntity(mouseOverEntity->getProxy().getParent());

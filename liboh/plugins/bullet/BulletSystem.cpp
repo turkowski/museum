@@ -572,5 +572,13 @@ void BulletSystem::destroyProxy(ProxyObjectPtr p) {
 
 void BulletSystem::getMsg(std::string& s) {
 }
+bool BulletSystem::queryRay(const Vector3d&position,
+                            const Vector3f&direction,
+                            double &returnDistance,
+                            Vector3f &returnNormal,
+                            SpaceObjectReference &returnName)const{
+    SILOG(bulletphysics,fatal, "Unimplemented BulletSystem::queryray");
+    return false;
+}
 
 }//namespace sirikata
