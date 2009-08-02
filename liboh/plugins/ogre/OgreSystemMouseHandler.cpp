@@ -163,7 +163,7 @@ class OgreSystem::MouseHandler {
     Entity *hoverEntity (CameraEntity *cam, Task::AbsTime time, float xPixel, float yPixel, int *hitCount,int which=0) {
         Location location(cam->getProxy().globalLocation(time));
         Vector3f dir (pixelToDirection(cam, location.getOrientation(), xPixel, yPixel));
-        SILOG(input,info,"X is "<<xPixel<<"; Y is "<<yPixel<<"; pos = "<<location.getPosition()<<"; dir = "<<dir);
+        SILOG(input,info,"X is "<<xPixel<<"; Y is "<<yPixel<<"; pos = "<<location.getPosition()<<"; dir = "<<dir << "; which=" << which);
 
         double dist;
         Entity *mouseOverEntity = mParent->rayTrace(location.getPosition(), dir, *hitCount, dist, which);
@@ -180,8 +180,10 @@ class OgreSystem::MouseHandler {
     }
 
     ///////////////////// CLICK HANDLERS /////////////////////
+    Task::AbsTime mStartTime;
 public:
     void clearSelection() {
+        hiliteSelection(true);      /// stop flashing
         for (SelectedObjectSet::const_iterator selectIter = mSelectedObjects.begin();
                 selectIter != mSelectedObjects.end(); ++selectIter) {
             Entity *ent = mParent->getEntity((*selectIter)->getObjectReference());
@@ -191,6 +193,24 @@ public:
             // Fire deselected event.
         }
         mSelectedObjects.clear();
+    }
+
+    void hiliteSelection(bool force=false) {
+        /// for now, flash selection
+        Task::DeltaTime dt=Task::AbsTime::now()-mStartTime;
+        bool show;
+        if (!force)
+            show=int(dt.toSeconds()*1000) % 1000 > 250;
+        else
+            show=true;
+        for (SelectedObjectSet::const_iterator selectIter = mSelectedObjects.begin();
+                selectIter != mSelectedObjects.end(); ++selectIter) {
+            Entity *ent = mParent->getEntity((*selectIter)->getObjectReference());
+            if (ent) {
+                //ent->setSelected(mCounter>0x80?true:false);
+                ent->setVisible(show);
+            }
+        }
     }
 private:
     bool recentMouseInRange(float x, float y, float *lastX, float *lastY) {
@@ -202,7 +222,7 @@ private:
         if (delx>.03125||dely>.03125) {
             *lastX=x;
             *lastY=y;
-            
+
             return false;
         }
         return true;
@@ -231,9 +251,10 @@ private:
                     }
                     mSelectedObjects.erase(selectIter);
                 }
-                mWhichRayObject+=direction;
+                mWhichRayObject+=direction;              /// comment out to always force top object
                 mLastShiftSelected = SpaceObjectReference::null();
-            }else {
+            }
+            else {
                 mWhichRayObject=0;
             }
             mouseOver = hoverEntity(camera, Task::AbsTime::now(), mouseev->mX, mouseev->mY, &mLastHitCount, mWhichRayObject);
@@ -267,10 +288,10 @@ private:
         else {
             // reset selection.
             clearSelection();
-            mWhichRayObject+=direction;
+            mWhichRayObject+=direction;       /// comment out to force selection of nearest object
             int numObjectsUnderCursor=0;
             Entity *mouseOver = hoverEntity(camera, Task::AbsTime::now(), mouseev->mX, mouseev->mY, &numObjectsUnderCursor, mWhichRayObject);
-            if (recentMouseInRange(mouseev->mX, mouseev->mY, &mLastHitX, &mLastHitY)==false||numObjectsUnderCursor!=mLastHitCount){
+            if (recentMouseInRange(mouseev->mX, mouseev->mY, &mLastHitX, &mLastHitY)==false||numObjectsUnderCursor!=mLastHitCount) {
                 mouseOver = hoverEntity(camera, Task::AbsTime::now(), mouseev->mX, mouseev->mY, &mLastHitCount, mWhichRayObject=0);
             }
             if (mouseOver) {
@@ -292,8 +313,8 @@ private:
             return EventResponse::nop();
         }
         if (ev->mAxis == SDLMouse::WHEELY || ev->mAxis == SDLMouse::RELY) {
-			AxisValue av = ev->mValue;
-			av.value *= 0.2;
+            AxisValue av = ev->mValue;
+            av.value *= 0.2;
             zoomInOut(av, ev->getDevice(), mParent->mPrimaryCamera, mSelectedObjects, mParent);
         }
         else if (ev->mAxis == SDLMouse::WHEELX || ev->mAxis == PointerDevice::RELX) {
@@ -573,7 +594,7 @@ private:
         }
         return EventResponse::nop();
     }
-    
+
     EventResponse moveHandler(EventPtr ev) {
         float angSpeed;
         Vector3f velocity;
@@ -587,7 +608,7 @@ private:
         }
         float amount = buttonev->mPressed?1:0;
         static float camSpeed = 1.0f;
-    
+
         CameraEntity *cam = mParent->mPrimaryCamera;
         ProxyPositionObjectPtr camProxy = cam->getProxyPtr();
         ProxyPositionObjectPtr parentProxy;
@@ -596,7 +617,7 @@ private:
         }
         Location loc = camProxy->extrapolateLocation(now);
         const Quaternion &orient = loc.getOrientation();
-    
+
         switch (buttonev->mButton) {
         case SDL_SCANCODE_S:
             amount*=-1;
@@ -701,7 +722,7 @@ private:
         camProxy->setPositionVelocity(now, loc);
         return EventResponse::nop();
     }
-    
+
     EventResponse import(EventPtr ev) {
         std::cout << "input path name for import: " << std::endl;
         std::string filename;
@@ -767,11 +788,11 @@ private:
         yaw = std::atan2((2*((q0*q3)+(q1*q2))), (1-(2*(std::pow(q2,2.0)+std::pow(q3,2.0)))));
         pitch /= DEG2RAD;
         roll /= DEG2RAD;
-        yaw /= DEG2RAD;  
+        yaw /= DEG2RAD;
         if (std::abs(pitch) > 89.0) {
             return false;
         }
-        return true;      
+        return true;
     }
 
     string physicalName(ProxyMeshObject *obj) {
@@ -790,7 +811,7 @@ private:
         ProxyCameraObject* camera = dynamic_cast<ProxyCameraObject*>(pp);
         ProxyLightObject* light = dynamic_cast<ProxyLightObject*>(pp);
         ProxyMeshObject* mesh = dynamic_cast<ProxyMeshObject*>(pp);
-    
+
         double x,y,z;
         std::string w("");
         /// if feasible, use Eulers: (not feasible == potential gymbal confusion)
@@ -825,7 +846,7 @@ private:
             fprintf(fp, "light,%s,,%s,%f,%f,%f,%f,%f,%f,%s,,,,,,,,,,,,,",typestr,parent.c_str(),
                     loc.getPosition().x,loc.getPosition().y,loc.getPosition().z,
                     x,y,z,w.c_str());
-    
+
             fprintf(fp, "%f,%f,%f,%f,%f,%f,%f,%f,%lf,%f,%f,%f,%f,%f,%f,%f,%d\n",
                     linfo.mDiffuseColor.x,linfo.mDiffuseColor.y,linfo.mDiffuseColor.z,ambientPower,
                     linfo.mSpecularColor.x,linfo.mSpecularColor.y,linfo.mSpecularColor.z,shadowPower,
@@ -864,7 +885,7 @@ private:
             fprintf(fp, "mesh,%s,%s,%s,%f,%f,%f,%f,%f,%f,%s,",subtype.c_str(),name.c_str(),parent.c_str(),
                     loc.getPosition().x,loc.getPosition().y,loc.getPosition().z,
                     x,y,z,w.c_str());
-    
+
             fprintf(fp, "%f,%f,%f,%f,%f,%f,%f,%f,%f,%d,%d,%s\n",
                     mesh->getScale().x,mesh->getScale().y,mesh->getScale().z,
                     phys.hull.x, phys.hull.y, phys.hull.z,
@@ -879,9 +900,9 @@ private:
             fprintf(fp, "#unknown object type in dumpObject\n");
         }
     }
-    
+
     ///////////////// DEVICE FUNCTIONS ////////////////
-    
+
     SubscriptionId registerAxisListener(const InputDevicePtr &dev,
                                         EventResponse(MouseHandler::*func)(EventPtr),
                                         int axis) {
@@ -893,7 +914,7 @@ private:
         mDeviceSubscriptions.insert(DeviceSubMap::value_type(&*dev, subId));
         return subId;
     }
-    
+
     SubscriptionId registerButtonListener(const InputDevicePtr &dev,
                                           EventResponse(MouseHandler::*func)(EventPtr),
                                           int button, bool released=false, InputDevice::Modifier mod=0) {
@@ -915,6 +936,7 @@ private:
         switch (ev->mButton) {
         case SDL_SCANCODE_Q:
             mDragAction[1] = 0;
+            clearSelection();
             break;
         case SDL_SCANCODE_W:
             mDragAction[1] = DragActionRegistry::get("moveObject");
@@ -1065,7 +1087,11 @@ private:
 // Accuracy: relative versus absolute mode; exponential decay versus pixels.
 
 public:
-    MouseHandler(OgreSystem *parent) : mParent(parent), mCurrentGroup(SpaceObjectReference::null()), mWhichRayObject(0) {
+    MouseHandler(OgreSystem *parent) :
+            mParent(parent),
+            mCurrentGroup(SpaceObjectReference::null()),
+            mStartTime(Task::AbsTime::now()),
+            mWhichRayObject(0) {
         mLastHitCount=0;
         mLastHitX=0;
         mLastHitY=0;
@@ -1126,6 +1152,11 @@ void OgreSystem::selectObject(Entity *obj, bool replace) {
         mMouseHandler->addToSelection(obj->getProxyPtr());
         obj->setSelected(true);
     }
+}
+
+void OgreSystem::hiliteSelection() {
+    if (mMouseHandler)
+        mMouseHandler->hiliteSelection();
 }
 
 }

@@ -901,6 +901,7 @@ bool OgreSystem::tick(){
     Meru::SequentialWorkQueue::getSingleton().dequeuePoll();
     Meru::SequentialWorkQueue::getSingleton().dequeueUntil(finishTime);
 
+    hiliteSelection();
     return continueRendering;
 }
 void OgreSystem::preFrame(Time currentTime, Duration frameTime) {
