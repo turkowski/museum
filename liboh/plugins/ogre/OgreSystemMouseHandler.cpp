@@ -751,7 +751,10 @@ private:
         return EventResponse::cancel();
     }
 
+    set<string> saveSceneNames;
+    
     EventResponse saveScene(EventPtr ev) {
+        saveSceneNames.clear();
         std::cout << "saving new scene as scene_new.csv: " << std::endl;
         FILE *output = fopen("scene_new.csv", "wt");
         if (!output) {
@@ -795,14 +798,27 @@ private:
         }
         return true;
     }
-
+    
     string physicalName(ProxyMeshObject *obj) {
         std::string name = obj->getPhysical().name;
         if (name.empty()) {
-            std::ostringstream os;
-            os << "obj" << (ObjectReference::Hasher()(obj->getObjectReference().object())%1677217);
-            name = os.str();
+            name = obj->getMesh().filename();
+            name.resize(name.size()-5);
+            //name += ".0";
         }
+//        if (name.find(".") < name.size()) {             /// remove any enumeration
+//            name.resize(name.find("."));
+//        }
+        int basesize = name.size();
+        int count = 1;
+        while (saveSceneNames.count(name)) {
+            name.resize(basesize);
+            std::ostringstream os;
+            os << name << "." << count;
+            name = os.str();
+            count++;
+        }
+        saveSceneNames.insert(name);
         return name;
     }
     void dumpObject(FILE* fp, Entity* e) {
