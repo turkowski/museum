@@ -59,9 +59,12 @@ def main():
     for fil in files:
         print "copying ", fil
         cmd = "STOR content/names/" + fil
-        f = open(fixsysline("tempSirikataUpload/")+fil)
-        ftp.storbinary(cmd, f)
-        f.close()
+        try:
+            f = open(fixsysline("tempSirikataUpload/")+fil)
+            ftp.storbinary(cmd, f)
+            f.close()
+        except:
+            print "problem uploading -- read only? skipping this one"
     print "done"
     print "----------------------------------------------------------"
     print "copying asset files:"
