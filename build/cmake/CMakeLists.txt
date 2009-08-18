@@ -599,7 +599,7 @@ ENDFOREACH()
 #protocol buffers preprocessing
 SET(ProtocolBuffersRoot ${LIBCORE_DIR}/protocol)
 SET(ProtocolBuffersSources
-  Persistence Sirikata Subscription Test
+  Persistence Sirikata Time Subscription Test
 )
 
 
@@ -929,6 +929,7 @@ SET(LIBOH_SOURCES
                   ${LIBOH_SOURCE_DIR}/HostedObject.cpp
                   ${LIBOH_SOURCE_DIR}/ObjectHostProxyManager.cpp
                   ${LIBOH_SOURCE_DIR}/TopLevelSpaceConnection.cpp
+                  ${LIBOH_SOURCE_DIR}/SpaceTimeOffsetManager.cpp
                   ${LIBOH_SOURCE_DIR}/SpaceConnection.cpp
                   ${LIBOH_SOURCE_DIR}/LightInfo.cpp
                   ${LIBOH_SOURCE_DIR}/ProxyMeshObject.cpp
