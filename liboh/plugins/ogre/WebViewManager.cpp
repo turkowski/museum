@@ -90,6 +90,10 @@ WebViewManager::WebViewManager(Ogre::Viewport* defaultViewport, InputManager* in
 
         chromeWebView = createWebView("__chrome", 400, 36, OverlayPosition(RP_TOPCENTER), false, 70, TIER_FRONT);
         chromeWebView->loadFile("navbar.html");
+
+		WebView* chromeUI = createWebView("ui", 1024, 768, OverlayPosition(RP_TOPRIGHT), false, 70, TIER_FRONT);
+		chromeUI -> loadFile("http://dennisschaaf.com/sirikataui/sirikata.html");
+		chromeUI -> setTransparent(true);
 #endif
 }
 
@@ -551,9 +555,11 @@ void WebViewManager::navigate(NavigationAction action) {
         char buffer[256];
         sprintf(buffer, "spawned_%d", unique_id++);
         String unique_name(buffer);
-        WebView* newwebview = createWebView(unique_name, 250, 250, OverlayPosition(RP_CENTER), false, 70, TIER_MIDDLE);
+        WebView* newwebview = createWebView(unique_name, 1024, 768, OverlayPosition(RP_CENTER), false, 70, TIER_MIDDLE);
         focusedNonChromeWebView = newwebview;
-        return;
+        newwebview -> setTransparent(true);
+
+		return;
     }
 
     if (focusedNonChromeWebView == NULL)
