@@ -694,7 +694,7 @@ private:
         case SDL_SCANCODE_PAGEDOWN:
             amount*=-1;
         case SDL_SCANCODE_PAGEUP:
-            amount *= 0.25;
+            amount *= camSpeed;
             amount *= WORLD_SCALE;
             loc.setVelocity(Vector3f(0,1,0)*amount);
             loc.setAngularSpeed(0);
