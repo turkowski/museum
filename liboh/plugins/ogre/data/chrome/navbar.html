@@ -26,6 +26,26 @@
       #reload {
       width: 31px;
       }
+ 
+      #moveforward {
+      height: 29px;
+      width: 31px;
+      }
+ 
+      #turnleft {
+      height: 29px;
+      width: 31px;
+      }
+ 
+      #turnright {
+      height: 29px;
+      width: 31px;
+      }
+ 
+      #help {
+      height: 29px;
+      width: 31px;
+      }
 
       div.addressbar {
       float: right;
@@ -36,6 +56,7 @@
       width: 230px;
       height: 30px;
       }
+			
       input.address {
       float: left;
       width: 100%;
@@ -82,6 +103,10 @@
         initButton("reload");
         initButton("go");
         initButton("newtab");
+        initButton("moveforward");
+        initButton("turnleft");
+        initButton("turnright");
+        initButton("help");
       }
 
       function goAddress() {
@@ -91,6 +116,10 @@
       function goForward() { Client.event("navforward"); }
       function goRefresh() { Client.event("navrefresh"); }
       function goNewTab() { Client.event("navnewtab"); }
+      function goMoveForward(amt) { Client.event("navmoveforward", amt); }
+      function goTurnLeft(amt) { Client.event("navturnleft", amt); }
+      function goTurnRight(amt) { Client.event("navturnright", amt); }
+      function goHelp(amt) { Client.event("navhelp", amt); }
     </script>
   </head>
   <body onLoad="initButtons()">
@@ -102,5 +131,9 @@
       <div class="button" id="go" onclick="goAddress()"></div>
     </div>
     <div class="button" id="newtab", onclick="goNewTab()"></div>
+    <div class="button" id="moveforward", onclick="goMoveForward(1.0)"></div>
+    <div class="button" id="turnleft", onclick="goTurnLeft(1.0)"></div>
+    <div class="button" id="turnright", onclick="goTurnRight(1.0)"></div>
+    <div class="button" id="help", onclick="goHelp()"></div>
   </body>
 </html>

@@ -244,7 +244,8 @@ public:
         NavigateForward,
         NavigateRefresh,
         NavigateHome,
-        NavigateGo
+        NavigateGo,
+		NavigateHelp
     };
     void navigate(NavigationAction action);
     void navigate(NavigationAction action, const String& arg);
