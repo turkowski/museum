@@ -51,7 +51,9 @@
 #include <space/Registration.hpp>
 #include <space/Router.hpp>
 namespace Sirikata {
-
+Time Space::now()const{
+    return Time::now(Duration::zero());//FIXME for distribution
+}
 Space::Space(const SpaceID&id):mID(id),mIO(Network::IOServiceFactory::makeIOService()) {
     unsigned int rsi=Services::REGISTRATION;
     unsigned int lsi=Services::LOC;
@@ -97,7 +99,6 @@ Space::Space(const SpaceID&id):mID(id),mIO(Network::IOServiceFactory::makeIOServ
 
     mGeom->forwardMessagesTo(mObjectConnections);
     mLoc->forwardMessagesTo(mGeom);
-    mLoc->forwardMessagesTo(mObjectConnections);//FIXME: is this necessary
 }
 void Space::run() {
     Network::IOServiceFactory::runService(mIO);

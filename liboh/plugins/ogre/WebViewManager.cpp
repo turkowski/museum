@@ -88,12 +88,14 @@ WebViewManager::WebViewManager(Ogre::Viewport* defaultViewport, InputManager* in
 	tooltipWebView->bind("resizeTooltip", std::tr1::bind(&WebViewManager::onResizeTooltip, this, _1, _2));
 	//tooltipWebView->setIgnoresMouse();
 
-        chromeWebView = createWebView("__chrome", 400, 36, OverlayPosition(RP_TOPRIGHT), false, 70, TIER_FRONT);
-        chromeWebView->loadFile("navbar.html");
+
+        chromeWebView = createWebView("__chrome", 540, 36, OverlayPosition(RP_TOPCENTER), false, 70, TIER_FRONT);
+    	chromeWebView->loadFile("navbar.html");
 
 	WebView* chromeUI = createWebView("ui", 1024, 768, OverlayPosition(RP_TOPCENTER), false, 70, TIER_MIDDLE);
 	chromeUI -> loadURL("http://dennisschaaf.com/sirikataui/sirikata.html");
 	//chromeUI -> setTransparent(true);
+
 #endif
 }
 
@@ -635,44 +637,49 @@ void WebViewManager::onRaiseWebViewEvent(WebView* webview, const Awesomium::JSAr
 Sirikata::Task::EventResponse WebViewManager::onMouseMove(Sirikata::Task::EventPtr evt)
 {
     MouseEventPtr e = std::tr1::dynamic_pointer_cast<MouseEvent>(evt);
-	if (!e) {
-		return Sirikata::Task::EventResponse::nop();
-	}
+    if (!e) {
+        return Sirikata::Task::EventResponse::nop();
+    }
 
-        this->injectMouseMove(InputCoordToWebViewCoord(e, e->mX, e->mY));
+    this->injectMouseMove(InputCoordToWebViewCoord(e, e->mX, e->mY));
 
-	return Sirikata::Task::EventResponse::nop();
+    return Sirikata::Task::EventResponse::nop();
 }
 
 Sirikata::Task::EventResponse WebViewManager::onMouseClick(Sirikata::Task::EventPtr evt)
 {
     MouseDownEventPtr e = std::tr1::dynamic_pointer_cast<MouseDownEvent>(evt);
-	if (!e) {
-		return Sirikata::Task::EventResponse::nop();
-	}
+    if (!e) {
+        return Sirikata::Task::EventResponse::nop();
+    }
 
-	onMouseMove(evt);
+    this->injectMouseMove(InputCoordToWebViewCoord(e, e->mX, e->mY));
 
-	int awebutton = InputButtonToAwesomiumButton(e->mButton);
-	bool success = (awebutton != UnknownMouseButton);
+    int awebutton = InputButtonToAwesomiumButton(e->mButton);
+    if (awebutton == UnknownMouseButton)
+        return Sirikata::Task::EventResponse::nop();
 
-        // A special case is needed for scroll wheel events that show up as clicks
-        if (awebutton == ScrollUpButton || awebutton == ScrollDownButton) {
-            int32 factor = (awebutton == ScrollUpButton ? 1 : -1);
-            int32 amount = 30; // XXX FIXME magic factor, should be a setting somewhere
-            WebViewCoord relCoord(0, factor*amount);
+    bool success = this->injectMouseUp(awebutton);
 
-            success = injectMouseWheel(relCoord);
-            if (success)
-		return Sirikata::Task::EventResponse::cancel();
-            else
-		return Sirikata::Task::EventResponse::nop();
-        }
+    if (success) {
+        return Sirikata::Task::EventResponse::cancel();
+    } else {
+        return Sirikata::Task::EventResponse::nop();
+    }
+}
+Sirikata::Task::EventResponse WebViewManager::onMousePressed(Sirikata::Task::EventPtr evt) {
+    MousePressedEventPtr e = std::tr1::dynamic_pointer_cast<MousePressedEvent>(evt);
+    if (!e) {
+        return Sirikata::Task::EventResponse::nop();
+    }
 
-	if (success) {
-		success = this->injectMouseDown(awebutton);
-		success = success && this->injectMouseUp(awebutton);
-	}
+    this->injectMouseMove(InputCoordToWebViewCoord(e, e->mX, e->mY));
+
+    int awebutton = InputButtonToAwesomiumButton(e->mButton);
+    if (awebutton == UnknownMouseButton)
+        return Sirikata::Task::EventResponse::nop();
+
+    bool success = this->injectMouseDown(awebutton);
 
 	if (success) {
 		return Sirikata::Task::EventResponse::cancel();
@@ -688,18 +695,17 @@ Sirikata::Task::EventResponse WebViewManager::onMouseDrag(Sirikata::Task::EventP
         return Sirikata::Task::EventResponse::nop();
     }
 
+    this->injectMouseMove(InputCoordToWebViewCoord(e, e->mX, e->mY));
+
     int awebutton = InputButtonToAwesomiumButton(e->mButton);
     if (awebutton == UnknownMouseButton)
         return Sirikata::Task::EventResponse::nop();
 
     bool success = true;
     switch(e->mType) {
+      case Sirikata::Input::DRAG_DEADBAND:
       case Sirikata::Input::DRAG_START:
-        this->injectMouseMove(InputCoordToWebViewCoord(e, e->mXStart, e->mYStart));
-        success = this->injectMouseDown(awebutton);
-        break;
       case Sirikata::Input::DRAG_DRAG:
-        success = this->injectMouseMove(InputCoordToWebViewCoord(e, e->mX, e->mY));
         break;
       case Sirikata::Input::DRAG_END:
         success = this->injectMouseUp(awebutton);
@@ -756,11 +762,6 @@ static int InputButtonToAwesomiumButton(int32 input_button) {
         return MiddleMouseButton;
       case 3:
         return RightMouseButton;
-// XXX FIXME these may only work for linux, depends on SDL input
-      case 4:
-        return ScrollUpButton;
-      case 5:
-        return ScrollDownButton;
       default:
         return UnknownMouseButton;
     }

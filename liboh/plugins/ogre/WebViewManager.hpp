@@ -244,7 +244,8 @@ public:
         NavigateForward,
         NavigateRefresh,
         NavigateHome,
-        NavigateGo
+        NavigateGo,
+		NavigateHelp
     };
     void navigate(NavigationAction action);
     void navigate(NavigationAction action, const String& arg);
@@ -293,6 +294,7 @@ protected:
     void onRaiseWebViewEvent(WebView* webview, const Awesomium::JSArguments& args);
 public:
 	Sirikata::Task::EventResponse onMouseMove(Sirikata::Task::EventPtr evt);
+	Sirikata::Task::EventResponse onMousePressed(Sirikata::Task::EventPtr evt);
 	Sirikata::Task::EventResponse onMouseDrag(Sirikata::Task::EventPtr evt);
 	Sirikata::Task::EventResponse onMouseClick(Sirikata::Task::EventPtr evt);
 	Sirikata::Task::EventResponse onButton(Sirikata::Task::EventPtr evt);

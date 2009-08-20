@@ -213,14 +213,27 @@ void FloatToggleInputResponse::invoke(Input::ButtonReleasedEventPtr& evt) {
     mCallback(mOffValue);
 }
 
+void FloatToggleInputResponse::invoke(Input::WebViewEventPtr& evt) {
+#ifdef HAVE_AWESOMIUM
+    const Awesomium::JSArguments& args = *(evt->args);
+    if (args.size() > 0) {
+        // We linearly interpolate between the "off" value and the "on" value.
+        mCallback(mOffValue + args[0].toDouble() * (mOnValue - mOffValue));
+    } else {
+        mCallback(mOnValue);
+    }
+#endif
+}
+
 InputResponse::InputEventDescriptorList FloatToggleInputResponse::getInputEvents(const InputBindingEvent& descriptor) const {
     InputEventDescriptorList result;
 
     if (descriptor.isKey()) {
         result.push_back(Input::EventDescriptor::Key(descriptor.keyButton(), Input::KEY_PRESSED, descriptor.keyModifiers()));
         result.push_back(Input::EventDescriptor::Key(descriptor.keyButton(), Input::KEY_RELEASED, descriptor.keyModifiers()));
+    } else if (descriptor.isWeb()) {
+        result.push_back(Input::EventDescriptor::Web(descriptor.webViewName(), descriptor.webName(), descriptor.webArgCount()));
     }
-
     return result;
 }
 

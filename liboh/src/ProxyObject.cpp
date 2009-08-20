@@ -40,7 +40,7 @@
 #include "util/RoutableMessageBody.hpp"
 #include "util/RoutableMessageHeader.hpp"
 #include "util/KnownServices.hpp"
-
+#include "oh/SpaceTimeOffsetManager.hpp"
 namespace Sirikata {
 
 ProxyObject::ProxyObject(ProxyManager *man, const SpaceObjectReference&id)
@@ -92,7 +92,7 @@ bool ProxyObject::isStatic(const TemporalValue<Location>::Time& when) const {
 // protected:
 // Notification that the Parent has been destroyed
 void ProxyObject::destroyed() {
-    unsetParent(TemporalValue<Location>::Time::now());
+    unsetParent(SpaceTimeOffsetManager::getSingleton().now(mID.space()));
 }
 
 QueryTracker *ProxyObject::getQueryTracker() const {
@@ -122,7 +122,26 @@ void ProxyObject::setLocation(TemporalValue<Location>::Time timeStamp,
     PositionProvider::notify(&PositionListener::updateLocation, timeStamp, location);
 }
 
-Task::AbsTime startTime(Task::AbsTime::now());
+void ProxyObject::updateLocationWithObjLoc(
+        Location & loc,
+        const Protocol::ObjLoc& reqLoc)
+{
+    if (reqLoc.has_position()) {
+        loc.setPosition(reqLoc.position());
+    }
+    if (reqLoc.has_orientation()) {
+        loc.setOrientation(reqLoc.orientation());
+    }
+    if (reqLoc.has_velocity()) {
+        loc.setVelocity(reqLoc.velocity());
+    }
+    if (reqLoc.has_rotational_axis()) {
+        loc.setAxisOfRotation(reqLoc.rotational_axis());
+    }
+    if (reqLoc.has_angular_speed()) {
+        loc.setAngularSpeed(reqLoc.angular_speed());
+    }
+}
 
 void ProxyObject::requestLocation(TemporalValue<Location>::Time timeStamp, const Protocol::ObjLoc& reqLoc) {
     if (mLocationAuthority) {
@@ -131,18 +150,7 @@ void ProxyObject::requestLocation(TemporalValue<Location>::Time timeStamp, const
     else {
         Location loc;
         loc = extrapolateLocation(timeStamp);
-        if (reqLoc.has_position()) {
-            loc.setPosition(reqLoc.position());
-        }
-        if (reqLoc.has_velocity()) {
-            loc.setVelocity(reqLoc.velocity());
-        }
-        if (reqLoc.has_rotational_axis()) {
-            loc.setAxisOfRotation(reqLoc.rotational_axis());
-        }
-        if (reqLoc.has_angular_speed()) {
-            loc.setAngularSpeed(reqLoc.angular_speed());
-        }
+        updateLocationWithObjLoc(loc, reqLoc);
         setLocation(timeStamp, loc);
     }
 }

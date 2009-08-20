@@ -41,6 +41,7 @@ enum Ports{
     ROUTER=4,
     PERSISTENCE=5,
 	PHYSICS=6,
+    TIMESYNC=7,
     OBJECT_CONNECTIONS=16383
 };
 }
