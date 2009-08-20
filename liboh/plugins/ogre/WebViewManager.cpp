@@ -89,12 +89,12 @@ WebViewManager::WebViewManager(Ogre::Viewport* defaultViewport, InputManager* in
 	//tooltipWebView->setIgnoresMouse();
 
 
-        chromeWebView = createWebView("__chrome", 540, 36, OverlayPosition(RP_TOPCENTER), false, 70, TIER_FRONT);
+        chromeWebView = createWebView("__chrome", 540, 36, OverlayPosition(RP_TOPRIGHT), false, 70, TIER_FRONT);
     	chromeWebView->loadFile("navbar.html");
 
 	WebView* chromeUI = createWebView("ui", 1024, 768, OverlayPosition(RP_TOPCENTER), false, 70, TIER_MIDDLE);
 	chromeUI -> loadURL("http://dennisschaaf.com/sirikataui/sirikata.html");
-	//chromeUI -> setTransparent(true);
+	chromeUI -> setTransparent(true);
 
 #endif
 }
