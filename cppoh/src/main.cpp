@@ -188,9 +188,18 @@ int main ( int argc,const char**argv ) {
     SpaceID mainSpace(UUID("12345678-1111-1111-1111-DEFA01759ACE",UUID::HumanReadable()));
     SpaceIDMap *spaceMap = new SpaceIDMap;
     spaceMap->insert(mainSpace, Network::Address(host->as<String>(),"5943"));
-
+    String localDbFile=dbFile->as<String>();
+    if (localDbFile.length()&&localDbFile[0]!='/'&&localDbFile[0]!='\\') {
+        FILE * fp=fopen(localDbFile.c_str(),"rb");
+        for (int i=0;i<4&&fp==NULL;++i) {
+            localDbFile="../"+localDbFile;
+            fp=fopen(localDbFile.c_str(),"rb");
+        }
+        if (fp) fclose(fp);
+        else localDbFile=dbFile->as<String>();
+    }
     Persistence::ReadWriteHandler *database=Persistence::ReadWriteHandlerFactory::getSingleton()
-        .getConstructor("sqlite")(String("--databasefile ")+dbFile->as<String>());
+        .getConstructor("sqlite")(String("--databasefile ")+localDbFile);
 
     ObjectHost *oh = new ObjectHost(spaceMap, workQueue, ioServ);
     oh->registerService(Services::PERSISTENCE, database);
@@ -275,6 +284,7 @@ int main ( int argc,const char**argv ) {
         for(SimList::iterator it = sims.begin(); it != sims.end(); it++) {
             continue_simulation = continue_simulation && (*it)->tick();
         }
+        oh->tick();
         Network::IOServiceFactory::pollService(ioServ);
     }
 	for(SimList::iterator it = sims.begin(); it != sims.end(); it++) {
