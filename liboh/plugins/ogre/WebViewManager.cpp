@@ -88,12 +88,12 @@ WebViewManager::WebViewManager(Ogre::Viewport* defaultViewport, InputManager* in
 	tooltipWebView->bind("resizeTooltip", std::tr1::bind(&WebViewManager::onResizeTooltip, this, _1, _2));
 	//tooltipWebView->setIgnoresMouse();
 
-        chromeWebView = createWebView("__chrome", 400, 36, OverlayPosition(RP_TOPCENTER), false, 70, TIER_FRONT);
+        chromeWebView = createWebView("__chrome", 400, 36, OverlayPosition(RP_TOPRIGHT), false, 70, TIER_FRONT);
         chromeWebView->loadFile("navbar.html");
 
-		WebView* chromeUI = createWebView("ui", 1024, 768, OverlayPosition(RP_TOPRIGHT), false, 70, TIER_FRONT);
-		chromeUI -> loadFile("http://dennisschaaf.com/sirikataui/sirikata.html");
-		chromeUI -> setTransparent(true);
+	WebView* chromeUI = createWebView("ui", 1024, 768, OverlayPosition(RP_TOPCENTER), false, 70, TIER_MIDDLE);
+	chromeUI -> loadURL("http://dennisschaaf.com/sirikataui/sirikata.html");
+	//chromeUI -> setTransparent(true);
 #endif
 }
 

@@ -272,6 +272,7 @@ int main ( int argc,const char**argv ) {
         }
     }
     while ( continue_simulation ) {
+	usleep(30000);
         for(SimList::iterator it = sims.begin(); it != sims.end(); it++) {
             continue_simulation = continue_simulation && (*it)->tick();
         }
