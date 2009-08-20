@@ -67,6 +67,11 @@ void DragActionRegistry::unset(const std::string &name) {
     }
 }
 
+
+////////////////////////////////////////////////////////////////////////////////
+// RelativeDrag
+////////////////////////////////////////////////////////////////////////////////
+
 class RelativeDrag : public ActiveDrag {
     PointerDevicePtr mDevice;
 public:
@@ -81,6 +86,11 @@ public:
         }
     }
 };
+
+
+////////////////////////////////////////////////////////////////////////////////
+// NullDrag
+////////////////////////////////////////////////////////////////////////////////
 
 class NullDrag : public ActiveDrag {
 public:
@@ -98,6 +108,11 @@ const DragAction &DragActionRegistry::get(const std::string &name) {
     }
     return iter->second;
 }
+
+
+////////////////////////////////////////////////////////////////////////////////
+// Utilities
+////////////////////////////////////////////////////////////////////////////////
 
 void pixelToRadians(CameraEntity *cam, float deltaXPct, float deltaYPct, float &xRadians, float &yRadians) {
     // This function is useless and hopelessly broken, since radians have no meaning in perspective. Use pixelToDirection instead!!!
@@ -133,19 +148,20 @@ void rotateCamera(CameraEntity *camera, float radianX, float radianY) {
     camera->getProxy().resetLocation(now, location);
 }
 
-    void panCamera(CameraEntity *camera, const Vector3d &oldLocalPosition, const Vector3d &toPan) {
-        Time now = SpaceTimeOffsetManager::getSingleton().now(camera->getProxy().getObjectReference().space());
+void panCamera(CameraEntity *camera, const Vector3d &oldLocalPosition, const Vector3d &toPan) {
+    Time now = SpaceTimeOffsetManager::getSingleton().now(camera->getProxy().getObjectReference().space());
 
-        Quaternion orient(camera->getProxy().globalLocation(now).getOrientation());
+    Quaternion orient(camera->getProxy().globalLocation(now).getOrientation());
 
-        Location location (camera->getProxy().extrapolateLocation(now));
-        location.setPosition(orient * toPan + oldLocalPosition);
-        camera->getProxy().resetLocation(now, location);
-    }
-
-
+    Location location (camera->getProxy().extrapolateLocation(now));
+    location.setPosition(orient * toPan + oldLocalPosition);
+    camera->getProxy().resetLocation(now, location);
+}
 
 
+////////////////////////////////////////////////////////////////////////////////
+// MoveObjectDrag
+////////////////////////////////////////////////////////////////////////////////
 
 class MoveObjectDrag : public ActiveDrag {
     std::vector<ProxyObjectWPtr> mSelectedObjects;
@@ -154,6 +170,7 @@ class MoveObjectDrag : public ActiveDrag {
     OgreSystem *mParent;
     Vector3d mMoveVector;
 public:
+    // Constructor
     MoveObjectDrag(const DragStartInfo &info)
         : mSelectedObjects(info.objects.begin(), info.objects.end()) {
         camera = info.camera;
@@ -164,6 +181,9 @@ public:
         Location cameraLoc = camera->getProxy().globalLocation(now);
         Vector3f cameraAxis = -cameraLoc.getOrientation().zAxis();
         mMoveVector = Vector3d(0,0,0);
+
+        // Get initial positions for all of the objects.
+        // Find the closest one, and compute the vector to it from the camera (mMoveVector).
         for (size_t i = 0; i < mSelectedObjects.size(); ++i) {
             ProxyObjectPtr obj (mSelectedObjects[i].lock());
             if (!obj) {
@@ -181,6 +201,7 @@ public:
         }
         SILOG(input,insane,"moveSelection: Moving selected objects at distance " << mMoveVector);
     }
+
     void mouseMoved(MouseDragEventPtr ev) {
         std::cout << "MOVE: mX = "<<ev->mX<<"; mY = "<<ev->mY<<". mXStart = "<< ev->mXStart<<"; mYStart = "<<ev->mYStart<<std::endl;
         if (mSelectedObjects.empty()) {
@@ -189,38 +210,44 @@ public:
         }
         Time now = SpaceTimeOffsetManager::getSingleton().now(camera->getProxy().getObjectReference().space());
 
-        /// dbm new way: ignore camera, just move along global axes
         Vector3d toMove(0,0,0);
         double sensitivity = 20.0;
         Location cameraLoc = camera->getProxy().globalLocation(now);
         Vector3f cameraAxis = -cameraLoc.getOrientation().zAxis();
-        if (mParent->getInputManager()->isModifierDown(Input::MOD_ALT)) sensitivity = 5.0;
+
+        // Constrained motion, only along coordinate axes.
+        /// dbm new way: ignore camera, just move along global axes
+        if (mParent->getInputManager()->isModifierDown(Input::MOD_ALT)) sensitivity = 5.0;  // Alt cranks up the constrained speed
         if (mParent->getInputManager()->isModifierDown(Input::MOD_SHIFT &&
-                mParent->getInputManager()->isModifierDown(Input::MOD_CTRL))) {
+                mParent->getInputManager()->isModifierDown(Input::MOD_CTRL))) {             // Control-shift constrains to Y
             toMove.y = ev->deltaY()*sensitivity;
         }
-        else if (mParent->getInputManager()->isModifierDown(Input::MOD_SHIFT)) {
+        else if (mParent->getInputManager()->isModifierDown(Input::MOD_SHIFT)) {            // Shift constrains to X
             if (cameraAxis.z > 0) sensitivity *=-1;
             toMove.x = ev->deltaX()*sensitivity;
         }
-        else if (mParent->getInputManager()->isModifierDown(Input::MOD_CTRL)) {
+        else if (mParent->getInputManager()->isModifierDown(Input::MOD_CTRL)) {             // Control constrains to Z
             if (cameraAxis.x < 0) sensitivity *=-1;
             toMove.z = ev->deltaX()*sensitivity;
         }
-        else {
-            Vector3d startAxis (pixelToDirection(camera, cameraLoc.getOrientation(), ev->mXStart, ev->mYStart));
-            Vector3d endAxis (pixelToDirection(camera, cameraLoc.getOrientation(), ev->mX, ev->mY));
+
+        // Unconstrained motion.
+        else {                                                                              // Move in a plane parallel to the viewport
+            Vector3d startAxis (pixelToDirection(camera, cameraLoc.getOrientation(), ev->mXStart, ev->mYStart));    // Start direction
+            Vector3d endAxis (pixelToDirection(camera, cameraLoc.getOrientation(), ev->mX, ev->mY));                // End direction
             Vector3d start, end;
-            float moveDistance = mMoveVector.dot(Vector3d(cameraAxis));
+            float moveDistance = mMoveVector.dot(Vector3d(cameraAxis));                     // Distnce to the object in the view direction.
             start = startAxis * moveDistance; // / cameraAxis.dot(startAxis);
             end = endAxis * moveDistance; // / cameraAxis.dot(endAxis);
-            toMove = (end - start);
+            toMove = (end - start);                                                         // Motion vector
             // Prevent moving outside of a small radius so you don't shoot an object into the horizon.
             if (toMove.length() > 10*mParent->getInputManager()->mWorldScale->as<float>()) {
                 // moving too much.
                 toMove *= (10*mParent->getInputManager()->mWorldScale->as<float>()/toMove.length());
             }
         }
+
+        // Add the "toMove" offset to each object
         for (size_t i = 0; i < mSelectedObjects.size(); ++i) {
             ProxyObjectPtr obj (mSelectedObjects[i].lock());
             if (obj) {
@@ -234,6 +261,11 @@ public:
     }
 };
 DragActionRegistry::RegisterClass<MoveObjectDrag> moveobj("moveObject");
+
+
+////////////////////////////////////////////////////////////////////////////////
+// RotateObjectDrag
+////////////////////////////////////////////////////////////////////////////////
 
 class RotateObjectDrag : public ActiveDrag {
     OgreSystem *mParent;
@@ -324,6 +356,11 @@ public:
 };
 DragActionRegistry::RegisterClass<RotateObjectDrag> rotateobj("rotateObject");
 
+
+////////////////////////////////////////////////////////////////////////////////
+// ScaleObjectDrag
+////////////////////////////////////////////////////////////////////////////////
+
 class ScaleObjectDrag : public RelativeDrag {
     OgreSystem *mParent;
     std::vector<ProxyObjectWPtr> mSelectedObjects;
@@ -390,6 +427,11 @@ public:
 };
 DragActionRegistry::RegisterClass<ScaleObjectDrag> scaleobj("scaleObject");
 
+
+////////////////////////////////////////////////////////////////////////////////
+// RotateCameraDrag
+////////////////////////////////////////////////////////////////////////////////
+
 class RotateCameraDrag : public RelativeDrag {
     CameraEntity *camera;
 public:
@@ -403,6 +445,11 @@ public:
     }
 };
 DragActionRegistry::RegisterClass<RotateCameraDrag> rotatecam("rotateCamera");
+
+
+////////////////////////////////////////////////////////////////////////////////
+// PanCameraDrag
+////////////////////////////////////////////////////////////////////////////////
 
 class PanCameraDrag : public ActiveDrag {
     Vector3d mStartPan;
@@ -450,6 +497,11 @@ public:
     }
 };
 DragActionRegistry::RegisterClass<PanCameraDrag> pancamera("panCamera");
+
+
+////////////////////////////////////////////////////////////////////////////////
+// ZoomCameraDrag
+////////////////////////////////////////////////////////////////////////////////
 
 void zoomInOut(Input::AxisValue value, const Input::InputDevicePtr &dev, CameraEntity *camera, const std::set<ProxyObjectWPtr>& objects, OgreSystem *parent) {
     if (!dev) return;
@@ -511,6 +563,10 @@ public:
 };
 DragActionRegistry::RegisterClass<ZoomCameraDrag> zoomCamera("zoomCamera");
 
+
+////////////////////////////////////////////////////////////////////////////////
+// OrbitObjectDrag
+////////////////////////////////////////////////////////////////////////////////
 
 /*
     void orbitObject_BROKEN(AxisValue value) {
@@ -577,5 +633,184 @@ public:
 DragActionRegistry::RegisterClass<OrbitObjectDrag> orbit("orbitObject");
 
 
+////////////////////////////////////////////////////////////////////////////////
+// MoveObjectOnWallDrag
+////////////////////////////////////////////////////////////////////////////////
+
+class MoveObjectOnWallDrag : public ActiveDrag {
+public:
+    // Constructor
+    MoveObjectOnWallDrag(const DragStartInfo &info);
+
+    // Dragger
+    void mouseMoved(MouseDragEventPtr ev);
+
+private:
+    // Return the plane of the wall, in the direction of the camera.
+    // If no wall is found, return false.
+    bool GetPlaneOfWall(const Vector3d &viewDirection, Vector4d *plane) const;
+    
+    // Check to see if this object is in the list of those to be moved.
+    bool IsObjectToBeMoved(const Entity *obj) const;
+
+    // Move the plane a given distance in its normal direction
+    static void ParallelTransportPlane(double distance, Vector4d *plane) { plane->w -= distance; }
+    
+    // Intersect the given ray from the camera with the given plane, and determine the intersection point.
+    // Return false if they do not intersect.
+    bool IntersectRayWithPlane(Vector3d &dir, Vector4d &plane, Vector3d *pt) const;
+    
+    std::vector<ProxyObjectWPtr> mSelectedObjects;
+    std::vector<Vector3d> mPositions;
+    std::vector<Quaternion> mOrientations;
+    CameraEntity *camera;
+    OgreSystem *mParent;
+    Vector3d mVectorToObject;   // Vector from the camera to the object
+    Location mCameraLocation;
+    float mDistanceFrontOfWall;  // The distance of the object from the wall.
+    Vector3d mStartPosition;
+};
+
+
+MoveObjectOnWallDrag::MoveObjectOnWallDrag(const DragStartInfo &info)
+    : mSelectedObjects(info.objects.begin(), info.objects.end())
+{
+    camera = info.camera;
+    mParent = info.sys;
+    Time now = SpaceTimeOffsetManager::getSingleton().now(camera->getProxy().getObjectReference().space());
+    float distanceToObject = 0.f; // Will be reset on first foundObject
+    bool foundObject = false;
+    const float kDistanceFromWall = 1;
+    mDistanceFrontOfWall = kDistanceFromWall;
+    
+    mCameraLocation = camera->getProxy().globalLocation(now);
+    Vector3f cameraAxis = -mCameraLocation.getOrientation().zAxis();
+    mVectorToObject = Vector3d(0,0,0);
+
+    // Get initial positions for all of the objects.
+    // Find the closest one, and compute the vector to it from the camera (mVectorToObject).
+    for (size_t i = 0; i < mSelectedObjects.size(); ++i) {
+        ProxyObjectPtr obj (mSelectedObjects[i].lock());    // This is unlocked when obj goes out of scope.
+        if (!obj) {
+            mPositions.push_back(Vector3d(0,0,0));  // FIXME: What purpose does this serve? A placeholder, maybe?
+            continue;
+        }
+        mPositions.push_back(obj->extrapolateLocation(now).getPosition());
+        mOrientations.push_back(obj->extrapolateLocation(now).getOrientation());
+        Vector3d objPosition = obj->globalLocation(now).getPosition();
+        Vector3d deltaPosition (objPosition - mCameraLocation.getPosition());
+        double dist = deltaPosition.dot(Vector3d(cameraAxis));
+        if (!foundObject || dist < distanceToObject) {
+            foundObject = true;
+            distanceToObject = dist;
+            mVectorToObject = deltaPosition;
+            mStartPosition = objPosition;
+        }
+    }
+    SILOG(input,insane,"moveSelection: Moving selected objects at distance " << mVectorToObject);
 }
+
+
+void MoveObjectOnWallDrag::mouseMoved(MouseDragEventPtr ev) {
+    std::cout << "MOVE: mX = "<<ev->mX<<"; mY = "<<ev->mY<<". mXStart = "<< ev->mXStart<<"; mYStart = "<<ev->mYStart<<std::endl;
+    if (mSelectedObjects.empty()) {
+        SILOG(input,insane,"moveSelection: Found no selected objects");
+        return;
+    }
+
+    Time now = SpaceTimeOffsetManager::getSingleton().now(camera->getProxy().getObjectReference().space());
+    mCameraLocation = camera->getProxy().globalLocation(now); // Camera doesn't move
+    Vector3f cameraAxis = -mCameraLocation.getOrientation().zAxis();
+    Vector3d startVec(pixelToDirection(camera, mCameraLocation.getOrientation(), ev->mXStart, ev->mYStart));
+    Vector3d   endVec(pixelToDirection(camera, mCameraLocation.getOrientation(), ev->mX,      ev->mY));
+    Vector4d startPlane, endPlane;
+    if (!GetPlaneOfWall(startVec, &startPlane)) {
+        SILOG(input, error, "MoveObjectOnWall: no start wall");
+        return;
+    }
+
+    // Compute end location
+    if (!GetPlaneOfWall(endVec, &endPlane)) {
+        SILOG(input, error, "MoveObjectOnWall: no end wall");
+        return;
+    }
+    ParallelTransportPlane(mDistanceFrontOfWall, &endPlane);    // Plane where picture should lie, offset a given distance from the wall
+    Vector3d endPosition;
+    if (!IntersectRayWithPlane(endVec, endPlane, &endPosition))
+        return; // Ray is parallel to plane
+
+    // Compute translation
+    Vector3d translation = endPosition - mStartPosition;
+    
+    // Compute rotation
+    Vector3f xAxis(1, 0, 0), yAxis(0, 1, 0), zAxis(0,0, 1);
+    Quaternion rotation(xAxis, yAxis, zAxis);
+
+    // Apply the translation and rotation to each object
+    for (size_t i = 0; i < mSelectedObjects.size(); ++i) {
+        ProxyObjectPtr obj (mSelectedObjects[i].lock());
+        if (obj) {
+            Location toSet (obj->extrapolateLocation(now));
+            toSet.setPosition(mPositions[i] + translation);
+            toSet.setOrientation(mOrientations[i] * rotation);
+            obj->setLocation(now, toSet);
+        }
+    }
 }
+
+
+bool MoveObjectOnWallDrag::GetPlaneOfWall(const Vector3d &viewDirection, Vector4d *plane) const {
+    Vector3d dViewPosition  =  mCameraLocation.getPosition();
+    Vector3f fViewDirection(viewDirection.x, viewDirection.y, viewDirection.z);
+    int numHits = 1, i;
+
+    for (i = 0; i < numHits; i++) {
+        double distance;
+        Vector3f normal;
+        const Entity *obj = mParent->rayTrace(dViewPosition, fViewDirection, numHits, distance, normal, i);
+        if (obj == NULL) {      // No object found
+            if (i < numHits)    // Why not?
+                continue;       // Still more objects: keep looking
+            break;              // No more objects: return failure
+        }
+        if (!IsObjectToBeMoved(obj)) {
+            Vector3d surfacePoint = dViewPosition + distance * viewDirection;
+            plane->x = normal.x;
+            plane->y = normal.y;
+            plane->z = normal.z;
+            plane->w = -(reinterpret_cast<Vector3d*>(&plane->x))->dot(surfacePoint);
+            return true;
+        }
+    }
+    
+    return false;
+}
+
+
+bool MoveObjectOnWallDrag::IsObjectToBeMoved(const Entity *testEntity) const {
+    ProxyObjectPtr testObject(testEntity->getProxyPtr());
+    for (size_t i = 0; i < mSelectedObjects.size(); ++i) {
+        ProxyObjectPtr obj(mSelectedObjects[i].lock());
+        if (obj && testObject.get() == obj.get())
+            return true;
+    }
+    return false;
+}
+
+
+bool MoveObjectOnWallDrag::IntersectRayWithPlane(Vector3d &dir, Vector4d &plane, Vector3d *pt) const {
+    double alpha = (reinterpret_cast<Vector3d*>(&plane.x))->dot(dir);
+    if (alpha == 0)
+        return false;
+    double beta =  (reinterpret_cast<Vector3d*>(&plane.x))->dot(mCameraLocation.getPosition());
+    double gamma = beta / alpha;
+    *pt = mCameraLocation.getPosition() + gamma * dir;
+    return true;
+}
+
+
+DragActionRegistry::RegisterClass<MoveObjectOnWallDrag> moveobjectonwall("moveObjectOnWall");
+
+
+} // namespace Graphics
+} // namespace Sirikata
