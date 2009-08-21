@@ -19,7 +19,13 @@ if os.path.exists("build/cmake/cppoh_d"):
 else:
     executable = "cppoh"
 
+if "linux" in sys.platform:
+    cmd = "python disable_keyrepeat.py 15 &"
+    os.system(cmd)
+
 cmd = "cd build/cmake; " + executable + " --db ../../" + fout
 print cmd
 os.system(cmd)
 
+if "linux" in sys.platform:
+    os.system("xset r")
