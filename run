@@ -1,6 +1,36 @@
 #!/usr/bin/python
 import sys, os, time
 
+#
+# Run prox & space daemons (if not already running)
+#
+
+def check_for_proc(proc):
+    sin, sout = os.popen2("ps -af")
+    s = sout.read()
+    print s
+    procs = s.split("\n")
+    running=0
+    for p in procs:
+        w = p.split()
+        if proc in w:
+            running=int(w[1])
+    return running
+
+for p in ["proximity", "proximity_d", "WAIT", "space", "space_d"]:
+
+    if p=="WAIT":
+        time.sleep(1)
+    else:
+        if not check_for_proc(p):
+            cmd = 'xterm -e "cd build/cmake; ./' + p + '" &'
+            print cmd
+            os.system(cmd)
+
+#
+# Convert .csv files into sqlite .db files
+#
+
 if len(sys.argv) > 1:
     fin = sys.argv[1]
 else:
@@ -10,22 +40,42 @@ fout = fin[:-4] + ".db"
 
 cmd = "python csv_converter.py " + fin +" "+ fout
 print cmd
-os.system(cmd)
+sin, sout = os.popen2(cmd)
+s = sout.read()
+if not "SUCCESS" in s:
+    print s
+    print "csv --> db conversion failed, aborting run"
 
-time.sleep(.5)
-
-if os.path.exists("build/cmake/cppoh_d"):
-    executable = "cppoh_d"
 else:
-    executable = "cppoh"
+    
+##os.system(cmd)
 
-if "linux" in sys.platform:
-    cmd = "python disable_keyrepeat.py 15 &"
+#
+# Run daemon to shut off keyrepeat
+#
+
+    if "linux" in sys.platform:
+        cmd = "python disable_keyrepeat.py 22 &"
+        os.system(cmd)
+
+#
+# Run our object host
+#
+
+    if os.path.exists("build/cmake/cppoh_d"):
+        executable = "cppoh_d"
+    else:
+        executable = "cppoh"
+
+    cmd = "cd build/cmake; " + executable + " --db ../../" + fout
+    print cmd
     os.system(cmd)
 
-cmd = "cd build/cmake; " + executable + " --db ../../" + fout
-print cmd
-os.system(cmd)
+dis = check_for_proc("disable_keyrepeat.py")
+if dis:
+    cmd = "kill -s KILL " + str(dis)
+    print cmd
+    os.system(cmd)
 
 if "linux" in sys.platform:
     os.system("xset r")
