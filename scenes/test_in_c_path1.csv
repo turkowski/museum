@@ -1,0 +1,8 @@
+"objtype","subtype","name","parent","script","scriptparams","pos_x","pos_y","pos_z","orient_x","orient_y","orient_z","orient_w","scale_x","scale_y","scale_z","hull_x","hull_y","hull_z","density","friction","bounce","colMask","colMsg","vel_x","vel_y","vel_z","rot_axis_x","rot_axis_y","rot_axis_z","rot_speed","meshURI","diffuse_x","diffuse_y","diffuse_z","ambient_x","ambient_y","ambient_z","specular_x","specular_y","specular_z","shadow_x","shadow_y","shadow_z","range","constantfall","linearfall","quadfall","cone_in","cone_out","power","cone_fall","shadow"
+"camera",,,"Avatar_01","monoscript","Assembly=Sirikata.Runtime&Class=PythonObject&Namespace=Sirikata.Runtime&PythonModule=test&PythonClass=exampleclass",999.11,41,10,0,0,0,,,,,,,,,0.6,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+"light","directional",,,,,-1.86,3515.99,3.32,22.45,-63.46,-164.4,,,,,,,,,0.6,,,,,,,,,,,,0.6,0.6,0.6,0.2,0.2,0.2,0.99,0.97,0.9,0.04,0.04,0.04,200000,1,0,0,30,40,0.9,1,0
+"mesh","character","Avatar_01",,,,999.11,38.81,2.75,0,0,0,,7,7,7,0.25,0.25,0.25,1,0.6,0.1,1,0,,,,,,,,"meru:///Avatar_Male_04.mesh",,,,,,,,,,,,,,,,,,,,,
+"mesh","graphiconly","in_c_path_1_cell_01",,,,986.23,35.94,-0.11,3.42,1.77,3.1,,1,1,1,,,,,,,,,,,,,,,,"meru:///in_c_path_1_cell_01.mesh",,,,,,,,,,,,,,,,,,,,,
+"mesh","staticmesh","in_c_path_1_phy",,,,0,0,0,0,0,0,,1,1,1,1,1,1,1,0.4,0.2,0,0,0,0,0,0,0,0,0,"meru:///in_c_path_1_phy.mesh",,,,,,,,,,,,,,,,,,,,,
+"mesh","graphiconly","ocean_plane",,,,0,-1000,0,0,0,0,,40,40,40,,,,,,,,,,,,,,,,"mhash:///da542c0771306094157836a55c5645e9cb0e4c56d9ecdb5e02e3ea4b59dc0c4b",,,,,,,,,,,,,,,,,,,,,
+"mesh","graphiconly","sky?",,,,-6.97,-18.49,213.5,0,0,0,,3000,3000,3000,,,,,,,,,,,,,,,,"mhash:///1c74fbde6008dc1bd5020c73eaf2025430bc6a1dbb6f9e781443730d0364dce0",,,,,,,,,,,,,,,,,,,,,
