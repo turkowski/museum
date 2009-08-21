@@ -1,0 +1,25 @@
+#!/usr/bin/python
+import sys, os, time
+
+if len(sys.argv) > 1:
+    fin = sys.argv[1]
+else:
+    fin = "scene.csv"
+
+fout = fin[:-4] + ".db"
+
+cmd = "python csv_converter.py " + fin +" "+ fout
+print cmd
+os.system(cmd)
+
+time.sleep(.5)
+
+if os.path.exists("build/cmake/cppoh_d"):
+    executable = "cppoh_d"
+else:
+    executable = "cppoh"
+
+cmd = "cd build/cmake; " + executable + " --db ../../" + fout
+print cmd
+os.system(cmd)
+

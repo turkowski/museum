@@ -1,0 +1,7 @@
+"objtype","subtype","name","parent","script","scriptparams","pos_x","pos_y","pos_z","orient_x","orient_y","orient_z","orient_w","scale_x","scale_y","scale_z","hull_x","hull_y","hull_z","density","friction","bounce","colMask","colMsg","vel_x","vel_y","vel_z","rot_axis_x","rot_axis_y","rot_axis_z","rot_speed","meshURI","diffuse_x","diffuse_y","diffuse_z","ambient_x","ambient_y","ambient_z","specular_x","specular_y","specular_z","shadow_x","shadow_y","shadow_z","range","constantfall","linearfall","quadfall","cone_in","cone_out","power","cone_fall","shadow"
+"camera",,,,"monoscript","Assembly=Sirikata.Runtime&Class=PythonObject&Namespace=Sirikata.Runtime&PythonModule=test&PythonClass=exampleclass",0,0,10,0,0,0,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+"light","directional",,,,,10,10,10,0,0,0,,,,,,,,,,,,,,,,,,,,,0.2,0.2,0.2,0,0,0,0,0,0,0.04,0.04,0.04,200000,0.4,0,0,30,40,0.9,1,0
+"mesh","graphiconly","wall1",,,,0,-1,0,0,0,0,,320,120,4,1,1,1,0,0.6,0.55,0,0,,,,,,,,"meru:///Box01.mesh",,,,,,,,,,,,,,,,,,,,,
+"mesh","graphiconly","wall2",,,,-4.04,-1,4.16,0,90,0,,320,120,4,1,1,1,0,0.6,0.55,0,0,,,,,,,,"meru:///Box01.mesh",,,,,,,,,,,,,,,,,,,,,
+"mesh","graphiconly","wall2",,,,4.1,-1,4.14,0,90,0,,320,120,4,1,1,1,0,0.6,0.55,0,0,,,,,,,,"meru:///Box01.mesh",,,,,,,,,,,,,,,,,,,,,
+"mesh","graphiconly","painting1",,,,0,0,0.3,0,0,0,,1.5,1,0.1,1,1,1,0,0.6,0.55,0,0,,,,,,,,"meru://daniel@/cube.mesh",,,,,,,,,,,,,,,,,,,,,
