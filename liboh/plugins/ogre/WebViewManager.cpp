@@ -88,9 +88,9 @@ WebViewManager::WebViewManager(Ogre::Viewport* defaultViewport, InputManager* in
 	tooltipWebView->bind("resizeTooltip", std::tr1::bind(&WebViewManager::onResizeTooltip, this, _1, _2));
 	//tooltipWebView->setIgnoresMouse();
 
-
         chromeWebView = createWebView("__chrome", 540, 36, OverlayPosition(RP_TOPRIGHT), false, 70, TIER_FRONT);
     	chromeWebView->loadFile("navbar.html");
+        chromeWebView->setTransparent(true);
 
 	WebView* chromeUI = createWebView("ui", 1024, 768, OverlayPosition(RP_TOPCENTER), false, 70, TIER_MIDDLE);
 	chromeUI -> loadURL("http://dennisschaaf.com/sirikataui/sirikata.html");
@@ -278,18 +278,31 @@ bool WebViewManager::injectMouseMove(const WebViewCoord& coord)
         }
 	else
 	{
+        if (focusedWebView) {
+            focusedWebView->injectMouseMove(
+                focusedWebView->getRelativeX(coord.x),
+                focusedWebView->getRelativeY(coord.y));
+        }
+
 		WebView* top = getTopWebView(coord.x, coord.y);
 
 		if(top)
 		{
-			top->injectMouseMove(top->getRelativeX(coord.x), top->getRelativeY(coord.y));
+			if (top != focusedWebView) {
+				top->injectMouseMove(top->getRelativeX(coord.x), top->getRelativeY(coord.y));
+			}
 			eventHandled = true;
 
 			WebViewMap::iterator iter;
-			for(iter = activeWebViews.begin(); iter != activeWebViews.end(); ++iter)
-				if(iter->second->ignoringBounds)
-					if(!(iter->second->isPointOverMe(coord.x, coord.y) && iter->second->overlay->panel->getZOrder() < top->overlay->panel->getZOrder()))
-						iter->second->injectMouseMove(iter->second->getRelativeX(coord.x), iter->second->getRelativeY(coord.y));
+			for(iter = activeWebViews.begin(); iter != activeWebViews.end(); ++iter) {
+				if(iter->second->ignoringBounds) {
+					if(!(iter->second->isPointOverMe(coord.x, coord.y) && iter->second->overlay->panel->getZOrder() < top->overlay->panel->getZOrder())) {
+						if (iter->second != top && iter->second != focusedWebView) {
+							iter->second->injectMouseMove(iter->second->getRelativeX(coord.x), iter->second->getRelativeY(coord.y));
+						}
+					}
+				}
+			}
 		}
 
 		if(tooltipParent)
@@ -558,6 +571,7 @@ void WebViewManager::navigate(NavigationAction action) {
         sprintf(buffer, "spawned_%d", unique_id++);
         String unique_name(buffer);
         WebView* newwebview = createWebView(unique_name, 1024, 768, OverlayPosition(RP_CENTER), false, 70, TIER_MIDDLE);
+        newwebview->setTransparent(true);
         focusedNonChromeWebView = newwebview;
         newwebview -> setTransparent(true);
 
