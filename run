@@ -1,28 +1,46 @@
 #!/usr/bin/python
 import sys, os, time
 
-#
-# Run prox & space daemons (if not already running)
-#
-
 def check_for_proc(proc):
     sin, sout = os.popen2("ps -af")
     s = sout.read()
-    print s
+##    print s
     procs = s.split("\n")
     running=0
     for p in procs:
         w = p.split()
         if proc in w:
             running=int(w[1])
+##    print "check_for_proc", proc, "returns:", running
     return running
 
-for p in ["proximity", "proximity_d", "WAIT", "space", "space_d"]:
+#
+# Check for executable version
+#
+
+if os.path.exists("build/cmake/cppoh_d"):
+    spaceserver = "space_d"
+    proxserver = "proximity_d"
+    executable = "cppoh_d"
+else:
+    if os.path.exists("build/cmake/cppoh"):
+        spaceserver = "space"
+        proxserver = "proximity"
+        executable = "cppoh"
+    else:
+        print "can't find executable"
+        exit()
+
+#
+# Run prox & space daemons (if not already running)
+#
+
+for p in [proxserver, "WAIT", spaceserver]:
 
     if p=="WAIT":
         time.sleep(1)
     else:
-        if not check_for_proc(p):
+        if not check_for_proc("./"+p):
             cmd = 'xterm -e "cd build/cmake; ./' + p + '" &'
             print cmd
             os.system(cmd)
@@ -35,9 +53,7 @@ if len(sys.argv) > 1:
     fin = sys.argv[1]
 else:
     fin = "scene.csv"
-
 fout = fin[:-4] + ".db"
-
 cmd = "python csv_converter.py " + fin +" "+ fout
 print cmd
 sin, sout = os.popen2(cmd)
@@ -45,37 +61,12 @@ s = sout.read()
 if not "SUCCESS" in s:
     print s
     print "csv --> db conversion failed, aborting run"
-
-else:
-    
-##os.system(cmd)
-
-#
-# Run daemon to shut off keyrepeat
-#
-
-    if "linux" in sys.platform:
-        cmd = "python disable_keyrepeat.py 22 &"
-        os.system(cmd)
+    exit()
 
 #
 # Run our object host
 #
 
-    if os.path.exists("build/cmake/cppoh_d"):
-        executable = "cppoh_d"
-    else:
-        executable = "cppoh"
-
-    cmd = "cd build/cmake; " + executable + " --db ../../" + fout
-    print cmd
-    os.system(cmd)
-
-dis = check_for_proc("disable_keyrepeat.py")
-if dis:
-    cmd = "kill -s KILL " + str(dis)
-    print cmd
-    os.system(cmd)
-
-if "linux" in sys.platform:
-    os.system("xset r")
+cmd = "cd build/cmake; " + executable + " --db ../../" + fout
+print cmd
+os.system(cmd)
