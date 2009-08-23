@@ -608,13 +608,18 @@ static void PythonNavigateHandler(const String& target, const String& pythonProg
     SILOG(ogre, error, pythonProgram);
 }
 
+
+typedef void (*NavigateHandlerProc)(const String& target, const String& args);
+
+
+struct NavigateDispatch {
+    const char *name;
+    NavigateHandlerProc handler;
+};
+
+
 static void NavigateCommandDispatcher(const String& str) {
     // Dispatch table
-    typedef void (*NavigateHandlerProc)(const String& target, const String& args);
-    struct NavigateDispatch {
-        const char *name;
-        NavigateHandlerProc handler;
-    };
     static const NavigateDispatch dispatchTable[] = {
         {   "python",   PythonNavigateHandler },
         {   NULL,       NULL }
