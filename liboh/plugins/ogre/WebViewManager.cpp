@@ -601,17 +601,66 @@ void WebViewManager::navigate(NavigationAction action) {
 #endif //HAVE_AWESOMIUM
 }
 
-void WebViewManager::navigate(NavigationAction action, const String& arg) {
-    if (focusedNonChromeWebView == NULL)
-        return;
 
+static void PythonNavigateHandler(const String& target, const String& pythonProgram) {
+    SILOG(ogre, error, "PythonNavigateHandler is unimplemented");
+    SILOG(ogre, error, target);
+    SILOG(ogre, error, pythonProgram);
+}
+
+static void NavigateCommandDispatcher(const String& str) {
+    // Dispatch table
+    typedef void (*NavigateHandlerProc)(const String& target, const String& args);
+    struct NavigateDispatch {
+        const char *name;
+        NavigateHandlerProc handler;
+    };
+    static const NavigateDispatch dispatchTable[] = {
+        {   "python",   PythonNavigateHandler },
+        {   NULL,       NULL }
+    };
+    static const char *delim = " \t\n\r";
+
+    // Get the command (first word)
+    size_t first = str.find_first_not_of(delim, 0);
+    size_t last  = str.find_first_of(delim);
+    String command(str.substr(first, last - first));
+
+    // Get the target (second word)
+    first = str.find_first_not_of(delim, last);
+    last  = str.find_first_of(delim, first);
+    String target(str.substr(first, last - first));
+
+    // Get the args (remaining text)
+    first = str.find_first_not_of(delim, last);
+    String args(str.substr(first));
+
+    // Look for the command in the table.
+    const char *ccommand = command.c_str();
+    const NavigateDispatch *p;
+    for (p = dispatchTable; p->name != NULL; ++p)
+        if (strcasecmp(ccommand, p->name) == 0)
+            break;
+
+    // Invoke the handler
+    if (p->handler != NULL)
+        p->handler(target, args);
+}
+
+
+void WebViewManager::navigate(NavigationAction action, const String& arg) {
 #ifdef HAVE_AWESOMIUM
-    switch(action) {
+    switch (action) {
       case NavigateGo:
-        focusedNonChromeWebView->loadURL(arg);
+        if (focusedNonChromeWebView)
+            focusedNonChromeWebView->loadURL(arg);
+        break;
+      case NavigateCommand:
+        SILOG(ogre, info, "NavigateCommand: " + arg);
+        NavigateCommandDispatcher(arg);
         break;
       default:
-        SILOG(ogre,error,"Unknown navigation action from navigate(action, arg).");
+        SILOG(ogre, error, "Unknown navigation action from navigate(action, arg).");
         break;
     }
 #endif //HAVE_AWESOMIUM

@@ -119,7 +119,8 @@
       function goMoveForward(amt) { Client.event("navmoveforward", amt); }
       function goTurnLeft(amt) { Client.event("navturnleft", amt); }
       function goTurnRight(amt) { Client.event("navturnright", amt); }
-      function goHelp(amt) { Client.event("navhelp", amt); }
+//      function goHelp() { Client.event("navhelp", "python camera insertObject"); }
+      function goHelp() { Client.event("navcommand", "python camera insertObject"); }
     </script>
   </head>
   <body onLoad="initButtons()">
