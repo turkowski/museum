@@ -96,7 +96,8 @@ void ProxyObject::destroyed() {
 }
 
 QueryTracker *ProxyObject::getQueryTracker() const {
-    return mManager->getQueryTracker(getObjectReference());
+    QueryTracker * qt = mManager->getQueryTracker(getObjectReference());
+    return qt;
 }
 
 void ProxyObject::addressMessage(RoutableMessageHeader &hdr) const {

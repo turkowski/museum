@@ -10,7 +10,7 @@ print dir(HostedObject)
 import System
 import util
 
-DEBUG_OUTPUT=False
+DEBUG_OUTPUT=True
 
 class exampleclass:
     def __init__(self):
@@ -51,6 +51,10 @@ class exampleclass:
                 dbQuery.send(HostedObject, myhdr)
             if proxcall.proximity_event == pbSiri.ProxCall.EXITED_PROXIMITY:
                 pass
+        elif name == "CameraMessage":
+            s = "".join(chr(i) for i in serialarg)
+            if DEBUG_OUTPUT: print "PY: CameraMessage:", s
+
     def sawAnotherObject(self,persistence,header,retstatus):
         if DEBUG_OUTPUT: print "PY: sawAnotherObject called"
         if header.HasField('return_status') or retstatus:

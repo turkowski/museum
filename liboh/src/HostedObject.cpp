@@ -1046,7 +1046,8 @@ void HostedObject::processRPC(const RoutableMessageHeader &msg, const std::strin
             receivedPositionUpdate(proxyObj, retObj.location(), true);
             perSpaceIter->second.locationWasReset(retObj.location().timestamp(), proxyObj->getLastLocation());
             if (proxyMgr) {
-                proxyMgr->createObject(proxyObj);
+                //proxyMgr->createObject(proxyObj);
+                proxyMgr->createViewedObject(proxyObj, getTracker());
                 ProxyCameraObject* cam = dynamic_cast<ProxyCameraObject*>(proxyObj.get());
                 if (cam) {
                     /* HACK: Because we have no method of scripting yet, we force
