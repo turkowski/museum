@@ -47,26 +47,6 @@ namespace Graphics {
 using namespace Input;
 using namespace Task;
 
-DragActionRegistry &DragActionRegistry::getSingleton() {
-    static DragActionRegistry *sSingleton = NULL;
-    if (!sSingleton) {
-        sSingleton = new DragActionRegistry;
-    }
-    return *sSingleton;
-}
-
-void DragActionRegistry::set(const std::string &name, const DragAction &obj) {
-    getSingleton().mRegistry[name] = obj;
-}
-
-void DragActionRegistry::unset(const std::string &name) {
-    std::tr1::unordered_map<std::string, DragAction>::iterator iter =
-        getSingleton().mRegistry.find(name);
-    if (iter != getSingleton().mRegistry.end()) {
-        getSingleton().mRegistry.erase(iter);
-    }
-}
-
 
 ////////////////////////////////////////////////////////////////////////////////
 // RelativeDrag
@@ -99,6 +79,31 @@ public:
 };
 
 DragAction nullDragAction (ActiveDrag::factory<NullDrag>);
+
+
+////////////////////////////////////////////////////////////////////////////////
+// DragActionRegistry
+////////////////////////////////////////////////////////////////////////////////
+
+DragActionRegistry &DragActionRegistry::getSingleton() {
+    static DragActionRegistry *sSingleton = NULL;
+    if (!sSingleton) {
+        sSingleton = new DragActionRegistry;
+    }
+    return *sSingleton;
+}
+
+void DragActionRegistry::set(const std::string &name, const DragAction &obj) {
+    getSingleton().mRegistry[name] = obj;
+}
+
+void DragActionRegistry::unset(const std::string &name) {
+    std::tr1::unordered_map<std::string, DragAction>::iterator iter =
+        getSingleton().mRegistry.find(name);
+    if (iter != getSingleton().mRegistry.end()) {
+        getSingleton().mRegistry.erase(iter);
+    }
+}
 
 const DragAction &DragActionRegistry::get(const std::string &name) {
     std::tr1::unordered_map<std::string, DragAction>::iterator iter =
@@ -634,6 +639,64 @@ DragActionRegistry::RegisterClass<OrbitObjectDrag> orbit("orbitObject");
 
 
 ////////////////////////////////////////////////////////////////////////////////
+// Plane
+////////////////////////////////////////////////////////////////////////////////
+
+class Plane : public Vector4d {
+public:
+    // Set a plane from a vector and a point on the plane.
+    // FIXME: There should be different classes for vectors and points.
+    void set(const Vector3d &nrml, const Vector3d &point) {
+        normal() = nrml;
+        normal().normalizeThis();
+        w = -normal().dot(point);
+    }
+
+    // This interface uses a single precision normal and a double precision point.
+    void set(const Vector3f &nrml, const Vector3d &point) {
+        set(Vector3d(nrml.x, nrml.y, nrml.z), point);
+    }
+    
+    // This gets a single precision normal.
+    void getNormal(Vector3f *nrml) const {
+        nrml->x = x;
+        nrml->y = y;
+        nrml->z = z;
+    }
+
+    // Return the normal to the plane.
+    const Vector3d& normal() const {
+        return reinterpret_cast<const Vector3d&>(x);
+    }
+
+    // Move a plane in the direction of its normal.
+    void parallelTransport(double distance) {
+        w -= distance;
+    }
+    
+    // Return the distance of the point to the plane.
+    double distance(const Vector3d &point) const {
+        return x * point.x + y * point.y + z * point.z + w;
+    }
+
+    // Intersect the ray (origin, direction) with the plane and return the intersection point.
+    // We assume that the ray direction has been normalized.
+    // False is returned if the ray is parallel to the plane.
+    bool intersectRay(const Vector3d &origin, const Vector3d &direction, Vector3d *point) const {
+        double f = normal().dot(direction);
+        if (f == 0)
+            return false;   // Ray is parallel to plane, and either has no intersection or an infinity of intersections.
+        *point = origin - (direction * distance(origin) / f);
+        return true;
+    }
+
+private:    
+    // Return a mutable reference to the normal of the plane.
+    Vector3d& normal() { return reinterpret_cast<Vector3d&>(x); }
+};
+
+
+////////////////////////////////////////////////////////////////////////////////
 // MoveObjectOnWallDrag
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -648,17 +711,10 @@ public:
 private:
     // Return the plane of the wall, in the direction of the camera.
     // If no wall is found, return false.
-    bool GetPlaneOfWall(const Vector3d &viewDirection, Vector4d *plane) const;
+    bool getPlaneOfWall(const Vector3d &viewDirection, Plane *plane) const;
     
     // Check to see if this object is in the list of those to be moved.
-    bool IsObjectToBeMoved(const Entity *obj) const;
-
-    // Move the plane a given distance in its normal direction
-    static void ParallelTransportPlane(double distance, Vector4d *plane) { plane->w -= distance; }
-    
-    // Intersect the given ray from the camera with the given plane, and determine the intersection point.
-    // Return false if they do not intersect.
-    bool IntersectRayWithPlane(Vector3d &dir, Vector4d &plane, Vector3d *pt) const;
+    bool isObjectToBeMoved(const Entity *obj) const;
     
     std::vector<ProxyObjectWPtr> mSelectedObjects;
     std::vector<Vector3d> mPositions;
@@ -669,6 +725,7 @@ private:
     Location mCameraLocation;
     float mDistanceFrontOfWall;  // The distance of the object from the wall.
     Vector3d mStartPosition;
+    Quaternion mStartOrientation;
 };
 
 
@@ -705,6 +762,7 @@ MoveObjectOnWallDrag::MoveObjectOnWallDrag(const DragStartInfo &info)
             distanceToObject = dist;
             mVectorToObject = deltaPosition;
             mStartPosition = objPosition;
+            mStartOrientation = obj->globalLocation(now).getOrientation();
         }
     }
     SILOG(input,insane,"moveSelection: Moving selected objects at distance " << mVectorToObject);
@@ -712,7 +770,6 @@ MoveObjectOnWallDrag::MoveObjectOnWallDrag(const DragStartInfo &info)
 
 
 void MoveObjectOnWallDrag::mouseMoved(MouseDragEventPtr ev) {
-    std::cout << "MOVE: mX = "<<ev->mX<<"; mY = "<<ev->mY<<". mXStart = "<< ev->mXStart<<"; mYStart = "<<ev->mYStart<<std::endl;
     if (mSelectedObjects.empty()) {
         SILOG(input,insane,"moveSelection: Found no selected objects");
         return;
@@ -723,28 +780,39 @@ void MoveObjectOnWallDrag::mouseMoved(MouseDragEventPtr ev) {
     Vector3f cameraAxis = -mCameraLocation.getOrientation().zAxis();
     Vector3d startVec(pixelToDirection(camera, mCameraLocation.getOrientation(), ev->mXStart, ev->mYStart));
     Vector3d   endVec(pixelToDirection(camera, mCameraLocation.getOrientation(), ev->mX,      ev->mY));
-    Vector4d startPlane, endPlane;
-    if (!GetPlaneOfWall(startVec, &startPlane)) {
+    Plane startPlane, endPlane;
+    if (!getPlaneOfWall(startVec, &startPlane)) {
         SILOG(input, error, "MoveObjectOnWall: no start wall");
         return;
     }
 
     // Compute end location
-    if (!GetPlaneOfWall(endVec, &endPlane)) {
+    if (!getPlaneOfWall(endVec, &endPlane)) {
         SILOG(input, error, "MoveObjectOnWall: no end wall");
         return;
     }
-    ParallelTransportPlane(mDistanceFrontOfWall, &endPlane);    // Plane where picture should lie, offset a given distance from the wall
+    endPlane.parallelTransport(mDistanceFrontOfWall);       // Plane where picture should lie, offset a given distance from the wall
     Vector3d endPosition;
-    if (!IntersectRayWithPlane(endVec, endPlane, &endPosition))
+    if (!endPlane.intersectRay(mCameraLocation.getPosition(), endVec, &endPosition))
         return; // Ray is parallel to plane
 
     // Compute translation
     Vector3d translation = endPosition - mStartPosition;
     
     // Compute rotation
-    Vector3f xAxis(1, 0, 0), yAxis(0, 1, 0), zAxis(0,0, 1);
+    Vector3f xAxis, yAxis, zAxis;
+    endPlane.getNormal(&zAxis);
+    xAxis = Vector3f::unitY().cross(zAxis);
+    yAxis = zAxis.cross(xAxis);
     Quaternion rotation(xAxis, yAxis, zAxis);
+    rotation = mStartOrientation.inverse() * rotation;
+    std::cout   << "MOVE: mX = " << ev->mX
+                << "; mY = " << ev->mY
+                << ". mXStart = " << ev->mXStart
+                << "; mYStart = " << ev->mYStart
+                << "; trans = " << translation
+                << "; rot = " << rotation
+                << std::endl;
 
     // Apply the translation and rotation to each object
     for (size_t i = 0; i < mSelectedObjects.size(); ++i) {
@@ -759,13 +827,13 @@ void MoveObjectOnWallDrag::mouseMoved(MouseDragEventPtr ev) {
 }
 
 
-bool MoveObjectOnWallDrag::GetPlaneOfWall(const Vector3d &viewDirection, Vector4d *plane) const {
+bool MoveObjectOnWallDrag::getPlaneOfWall(const Vector3d &viewDirection, Plane *plane) const {
     Vector3d dViewPosition  =  mCameraLocation.getPosition();
     Vector3f fViewDirection(viewDirection.x, viewDirection.y, viewDirection.z);
     int numHits = 1, i;
 
     for (i = 0; i < numHits; i++) {
-        double distance;
+        double distance;        // Distance along the ray
         Vector3f normal;
         const Entity *obj = mParent->rayTrace(dViewPosition, fViewDirection, numHits, distance, normal, i);
         if (obj == NULL) {      // No object found
@@ -773,13 +841,20 @@ bool MoveObjectOnWallDrag::GetPlaneOfWall(const Vector3d &viewDirection, Vector4
                 continue;       // Still more objects: keep looking
             break;              // No more objects: return failure
         }
-        if (!IsObjectToBeMoved(obj)) {
+        if (!isObjectToBeMoved(obj)) {
             Vector3d surfacePoint = dViewPosition + distance * viewDirection;
-            plane->x = normal.x;
-            plane->y = normal.y;
-            plane->z = normal.z;
-            plane->w = -(reinterpret_cast<Vector3d*>(&plane->x))->dot(surfacePoint);
-            return true;
+            if (fViewDirection.dot(normal) > 0) // Normal is pointing away from the camera
+                normal = -normal;               // Get normal pointing toward the camera
+            plane->set(normal, surfacePoint);
+#ifdef DEBUG
+            Vector3d intPt;
+            plane->intersectRay(mCameraLocation.getPosition(), viewDirection, &intPt);
+            std::cout   << "viewDir = " << viewDirection
+                        << "; plane = " << *plane
+                        << "; intersection = " << intPt
+                        << std::endl;
+#endif // DEBUG
+           return true;
         }
     }
     
@@ -787,7 +862,7 @@ bool MoveObjectOnWallDrag::GetPlaneOfWall(const Vector3d &viewDirection, Vector4
 }
 
 
-bool MoveObjectOnWallDrag::IsObjectToBeMoved(const Entity *testEntity) const {
+bool MoveObjectOnWallDrag::isObjectToBeMoved(const Entity *testEntity) const {
     ProxyObjectPtr testObject(testEntity->getProxyPtr());
     for (size_t i = 0; i < mSelectedObjects.size(); ++i) {
         ProxyObjectPtr obj(mSelectedObjects[i].lock());
@@ -795,17 +870,6 @@ bool MoveObjectOnWallDrag::IsObjectToBeMoved(const Entity *testEntity) const {
             return true;
     }
     return false;
-}
-
-
-bool MoveObjectOnWallDrag::IntersectRayWithPlane(Vector3d &dir, Vector4d &plane, Vector3d *pt) const {
-    double alpha = (reinterpret_cast<Vector3d*>(&plane.x))->dot(dir);
-    if (alpha == 0)
-        return false;
-    double beta =  (reinterpret_cast<Vector3d*>(&plane.x))->dot(mCameraLocation.getPosition());
-    double gamma = beta / alpha;
-    *pt = mCameraLocation.getPosition() + gamma * dir;
-    return true;
 }
 
 
