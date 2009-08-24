@@ -10,15 +10,12 @@ print dir(HostedObject)
 import System
 import util
 
-DEBUG_OUTPUT=False
+DEBUG_OUTPUT=True
 
 class exampleclass:
     def __init__(self):
-        self.val=0
-    def func(self,otherval):
-        self.val+=otherval
-        print self.val
-        return self.val;
+        self.paintings={}
+
     def reallyProcessRPC(self,serialheader,name,serialarg):
         print "Got an RPC named",name
         header = pbHead.Header()
@@ -36,7 +33,7 @@ class exampleclass:
 
             print self.spaceid
             self.sendNewProx()
-            self.setPosition(angular_speed=0,axis=(0,1,0))
+            self.setPosition(angular_speed=0, axis=(0,1,0))
         elif name == "ProxCall":
             proxcall = pbSiri.ProxCall()
             proxcall.ParseFromString(util.fromByteArray(serialarg))
@@ -51,8 +48,13 @@ class exampleclass:
                 dbQuery.send(HostedObject, myhdr)
             if proxcall.proximity_event == pbSiri.ProxCall.EXITED_PROXIMITY:
                 pass
+        elif name == "CameraMessage":
+            s = "".join(chr(i) for i in serialarg)
+            if DEBUG_OUTPUT: print "PY: CameraMessage:", s
+            print "PY:   moving painting1 =", self.paintings["painting1"]
+            self.setPosition(objid=self.paintings["painting1"], position = (0, 0, .3))
+
     def sawAnotherObject(self,persistence,header,retstatus):
-        if DEBUG_OUTPUT: print "PY: sawAnotherObject called"
         if header.HasField('return_status') or retstatus:
             return
         uuid = util.tupleToUUID(header.source_object)
@@ -76,13 +78,18 @@ class exampleclass:
             header.destination_object=util.tupleFromUUID(self.objid);
             header.destination_port=5#FIXME this should be PERSISTENCE_SERVICE_PORT
             HostedObject.SendMessage(header.SerializeToString()+rws.SerializeToString());
+        elif myName[:8]=="painting":
+            self.paintings[myName]=uuid
+
     def processRPC(self,header,name,arg):
         try:
             self.reallyProcessRPC(header,name,arg)
         except:
             print "Error processing RPC",name
             traceback.print_exc()
-    def setPosition(self,position=None,orientation=None,velocity=None,angular_speed=None,axis=None,force=False):
+
+    def setPosition(self,position=None,orientation=None,velocity=None,angular_speed=None,axis=None,force=False,objid=None):
+        if not objid: objid = self.objid
         objloc = pbSiri.ObjLoc()
         if position is not None:
             for i in range(3):
@@ -113,8 +120,9 @@ class exampleclass:
         body.message_arguments.append(objloc.SerializeToString())
         header = pbHead.Header()
         header.destination_space = util.tupleFromUUID(self.spaceid)
-        header.destination_object = util.tupleFromUUID(self.objid)
+        header.destination_object = util.tupleFromUUID(objid)
         HostedObject.SendMessage(util.toByteArray(header.SerializeToString()+body.SerializeToString()))
+
     def sendNewProx(self):
         print "sendprox2"
         try:
@@ -147,6 +155,7 @@ class exampleclass:
 
     def processMessage(self,header,body):
         print "Got a message"
+
     def tick(self,tim):
         x=str(tim)
         print "Current time is "+x;

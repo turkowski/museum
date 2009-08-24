@@ -56,6 +56,7 @@
 #include "WebViewManager.hpp"
 #include "CameraPath.hpp"
 #include "Ogre_Sirikata.pbj.hpp"
+#include "util/RoutableMessageBody.hpp"
 
 namespace Sirikata {
 namespace Graphics {
@@ -1125,6 +1126,19 @@ private:
         WebViewManager::getSingleton().navigate(action, arg);
     }
 
+    /// generic message mechanism (to send messages from JScript to Camera/Python thru C++, for instance)
+    void genericStringMessage(WebViewManager::NavigationAction action, const String& arg) {
+        //ProxyObjectPtr cam = getTopLevelParent(mParent->mPrimaryCamera->getProxyPtr());
+        ProxyObjectPtr cam = mParent->mPrimaryCamera->getProxyPtr();
+        if (!cam) return;
+
+        RoutableMessageBody msg;
+        msg.add_message("CameraMessage", arg);
+        String smsg;
+        msg.SerializeToString(&smsg);
+        cam->sendMessage(MemoryReference(smsg));
+    }
+
     ///////////////// DEVICE FUNCTIONS ////////////////
 
     EventResponse deviceListener(EventPtr evbase) {
@@ -1279,8 +1293,10 @@ public:
         mInputResponses["webHome"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::webViewNavigateAction, this, WebViewManager::NavigateHome));
         mInputResponses["webGo"] = new StringInputResponse(std::tr1::bind(&MouseHandler::webViewNavigateStringAction, this, WebViewManager::NavigateGo, _1));
 
-        mInputResponses["webCommand"] = new StringInputResponse(std::tr1::bind(&MouseHandler::webViewNavigateStringAction, this, WebViewManager::NavigateCommand, _1));
+//        mInputResponses["webCommand"] = new StringInputResponse(std::tr1::bind(&MouseHandler::webViewNavigateStringAction, this, WebViewManager::NavigateCommand, _1));
 
+        mInputResponses["genericMessage"] = new StringInputResponse(std::tr1::bind(&MouseHandler::genericStringMessage, this, WebViewManager::NavigateCommand, _1));
+        
         // Movement
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_W), mInputResponses["moveForward"]);
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_S), mInputResponses["moveBackward"]);
@@ -1344,7 +1360,8 @@ public:
         mInputBinding.add(InputBindingEvent::Web("__chrome", "navturnleft", 1), mInputResponses["rotateYPos"]);
         mInputBinding.add(InputBindingEvent::Web("__chrome", "navturnright", 1), mInputResponses["rotateYNeg"]);
 
-        mInputBinding.add(InputBindingEvent::Web("__chrome", "navcommand", 1), mInputResponses["webCommand"]);
+    //    mInputBinding.add(InputBindingEvent::Web("__chrome", "navcommand", 1), mInputResponses["webCommand"]);
+        mInputBinding.add(InputBindingEvent::Web("__chrome", "navcommand", 1), mInputResponses["genericMessage"]);
     }
 
     ~MouseHandler() {
