@@ -208,7 +208,11 @@ public:
     }
 
     void mouseMoved(MouseDragEventPtr ev) {
-        std::cout << "MOVE: mX = "<<ev->mX<<"; mY = "<<ev->mY<<". mXStart = "<< ev->mXStart<<"; mYStart = "<<ev->mYStart<<std::endl;
+        SILOG(input, insane,    "MOVE: mX = " << ev->mX
+                            <<      "; mY = " << ev->mY
+                            << ". mXStart = " << ev->mXStart
+                            << "; mYStart = " << ev->mYStart
+        );
         if (mSelectedObjects.empty()) {
             SILOG(input,insane,"moveSelection: Found no selected objects");
             return;
@@ -415,7 +419,10 @@ public:
                 Location loc (ent->extrapolateLocation(now));
                 Vector3d localTrans = mOriginalPosition[i] - avgPos;
                 loc.setPosition(avgPos + localTrans*mTotalScale);
-                std::cout << "debug avgPos: " << avgPos << " localTrans" << localTrans << " scale: " << mTotalScale << std::endl;
+                SILOG(input, insane,   "debug avgPos: " << avgPos
+                                    << ", localTrans: " << localTrans
+                                    <<      ", scale: " << mTotalScale
+                );
                 ent->resetLocation(now, loc);
                 std::tr1::shared_ptr<ProxyMeshObject> meshptr (
                     std::tr1::dynamic_pointer_cast<ProxyMeshObject>(ent));
@@ -807,15 +814,13 @@ void MoveObjectOnWallDrag::mouseMoved(MouseDragEventPtr ev) {
     Quaternion rotation(xAxis, yAxis, zAxis);
     rotation = mStartOrientation.inverse() * rotation;
 
-#ifdef DEBUG // FIXME: Can we do this with SILOG?
-    std::cout   <<  "MOVE: mX = " << ev->mX
-                <<      "; mY = " << ev->mY
-                << ". mXStart = " << ev->mXStart
-                << "; mYStart = " << ev->mYStart
-                <<   ". trans = " << translation
-                <<     ". rot = " << rotation
-                << std::endl;
-#endif
+    SILOG(input, info,  "MOVE: mX = " << ev->mX
+                    <<      ", mY = " << ev->mY
+                    << "; mXStart = " << ev->mXStart
+                    << ", mYStart = " << ev->mYStart
+                    <<   "; trans = " << translation
+                    <<     ", rot = " << rotation
+    );
 
     // Apply the translation and rotation to each object
     for (size_t i = 0; i < mSelectedObjects.size(); ++i) {
