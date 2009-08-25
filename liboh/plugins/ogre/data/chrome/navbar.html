@@ -92,9 +92,9 @@
         setButtonNormal(id);
         var button = document.getElementById(id);
         button.onmouseover = function() { setButtonHover(id); }
-        button.onmouseout = function() { setButtonNormal(id); }
-        button.onmousedown = function() { setButtonPressed(id); }
-        button.onmouseup = function() { setButtonNormal(id); }
+        button.onmouseout  = function() { setButtonNormal(id); }
+        if (!button.hasOwnProperty("onmousedown"))  button.onmousedown = function() { setButtonPressed(id); }
+        if (!button.hasOwnProperty("onmouseup"))    button.onmousedown = function() { setButtonNormal(id);  }
       }
 
       function initButtons() {
@@ -119,8 +119,17 @@
       function goMoveForward(amt) { Client.event("navmoveforward", amt); }
       function goTurnLeft(amt) { Client.event("navturnleft", amt); }
       function goTurnRight(amt) { Client.event("navturnright", amt); }
-//      function goHelp() { Client.event("navhelp", "python camera insertObject"); }
+      // This is supposed to be for a navigation help message, but we use it for testing now. 
       function goHelp() { Client.event("navcommand", "python camera insertObject"); }
+
+      // FIXME: Use inheritance or call chaining to add additional functionality.
+      function startMoveForward() { Client.event("navmoveforward", 1.0); setButtonPressed("moveforward"); }
+      function  stopMoveForward() { Client.event("navmoveforward", 0.0); setButtonNormal( "moveforward"); }
+      function    startTurnLeft() { Client.event("navturnleft",    1.0); setButtonPressed("turnleft"); }
+      function     stopTurnLeft() { Client.event("navturnleft",    0.0); setButtonNormal( "turnleft"); }
+      function   startTurnRight() { Client.event("navturnright",   1.0); setButtonPressed("turnright"); }
+      function    stopTurnRight() { Client.event("navturnright",   0.0); setButtonNormal( "turnright"); }
+
     </script>
   </head>
   <body onLoad="initButtons()">
@@ -132,9 +141,9 @@
       <div class="button" id="go" onclick="goAddress()"></div>
     </div>
     <div class="button" id="newtab", onclick="goNewTab()"></div>
-    <div class="button" id="moveforward", onclick="goMoveForward(1.0)"></div>
-    <div class="button" id="turnleft", onclick="goTurnLeft(1.0)"></div>
-    <div class="button" id="turnright", onclick="goTurnRight(1.0)"></div>
+    <div class="button" id="moveforward", onmousedown="startMoveForward()", onmouseup="stopMoveForward()"></div>
+    <div class="button" id="turnleft",    onmousedown="startTurnLeft()",    onmouseup="stopTurnLeft()"></div>
+    <div class="button" id="turnright",   onmousedown="startTurnRight()",   onmouseup="stopTurnRight()"></div>
     <div class="button" id="help", onclick="goHelp()"></div>
   </body>
 </html>
