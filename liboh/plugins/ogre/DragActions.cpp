@@ -795,7 +795,7 @@ void MoveObjectOnWallDrag::mouseMoved(MouseDragEventPtr ev) {
 
     // Compute end location
     if (!getPlaneOfWall(endVec, &endPlane)) {
-        SILOG(input, warning, "MoveObjectOnWall: no end wall");
+        SILOG(input, insane, "MoveObjectOnWall: no end wall");
         return;
     }
     endPlane.parallelTransport(mDistanceFrontOfWall);       // Plane where picture should lie, offset a given distance from the wall
@@ -814,12 +814,12 @@ void MoveObjectOnWallDrag::mouseMoved(MouseDragEventPtr ev) {
     Quaternion rotation(xAxis, yAxis, zAxis);
     rotation = mStartOrientation.inverse() * rotation;
 
-    SILOG(input, info,  "MOVE: mX = " << ev->mX
-                    <<      ", mY = " << ev->mY
-                    << "; mXStart = " << ev->mXStart
-                    << ", mYStart = " << ev->mYStart
-                    <<   "; trans = " << translation
-                    <<     ", rot = " << rotation
+    SILOG(input, insane,    "MOVE: mX = " << ev->mX
+                        <<      ", mY = " << ev->mY
+                        << "; mXStart = " << ev->mXStart
+                        << ", mYStart = " << ev->mYStart
+                        <<   "; trans = " << translation
+                        <<     ", rot = " << rotation
     );
 
     // Apply the translation and rotation to each object
