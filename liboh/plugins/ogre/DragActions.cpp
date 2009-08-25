@@ -737,7 +737,7 @@ MoveObjectOnWallDrag::MoveObjectOnWallDrag(const DragStartInfo &info)
     Time now = SpaceTimeOffsetManager::getSingleton().now(camera->getProxy().getObjectReference().space());
     float distanceToObject = 0.f; // Will be reset on first foundObject
     bool foundObject = false;
-    const float kDistanceFromWall = 1;
+    const float kDistanceFromWall = 10.e-2f;   // 10 cm
     mDistanceFrontOfWall = kDistanceFromWall;
     
     mCameraLocation = camera->getProxy().globalLocation(now);
@@ -765,7 +765,7 @@ MoveObjectOnWallDrag::MoveObjectOnWallDrag(const DragStartInfo &info)
             mStartOrientation = obj->globalLocation(now).getOrientation();
         }
     }
-    SILOG(input,insane,"moveSelection: Moving selected objects at distance " << mVectorToObject);
+    SILOG(input, insane, "moveSelection: Moving selected objects at distance " << mVectorToObject);
 }
 
 
@@ -788,7 +788,7 @@ void MoveObjectOnWallDrag::mouseMoved(MouseDragEventPtr ev) {
 
     // Compute end location
     if (!getPlaneOfWall(endVec, &endPlane)) {
-        SILOG(input, error, "MoveObjectOnWall: no end wall");
+        SILOG(input, warning, "MoveObjectOnWall: no end wall");
         return;
     }
     endPlane.parallelTransport(mDistanceFrontOfWall);       // Plane where picture should lie, offset a given distance from the wall
@@ -806,13 +806,16 @@ void MoveObjectOnWallDrag::mouseMoved(MouseDragEventPtr ev) {
     yAxis = zAxis.cross(xAxis);
     Quaternion rotation(xAxis, yAxis, zAxis);
     rotation = mStartOrientation.inverse() * rotation;
-    std::cout   << "MOVE: mX = " << ev->mX
-                << "; mY = " << ev->mY
+
+#ifdef DEBUG // FIXME: Can we do this with SILOG?
+    std::cout   <<  "MOVE: mX = " << ev->mX
+                <<      "; mY = " << ev->mY
                 << ". mXStart = " << ev->mXStart
                 << "; mYStart = " << ev->mYStart
-                << "; trans = " << translation
-                << "; rot = " << rotation
+                <<   ". trans = " << translation
+                <<     ". rot = " << rotation
                 << std::endl;
+#endif
 
     // Apply the translation and rotation to each object
     for (size_t i = 0; i < mSelectedObjects.size(); ++i) {
@@ -846,15 +849,7 @@ bool MoveObjectOnWallDrag::getPlaneOfWall(const Vector3d &viewDirection, Plane *
             if (fViewDirection.dot(normal) > 0) // Normal is pointing away from the camera
                 normal = -normal;               // Get normal pointing toward the camera
             plane->set(normal, surfacePoint);
-#ifdef DEBUG
-            Vector3d intPt;
-            plane->intersectRay(mCameraLocation.getPosition(), viewDirection, &intPt);
-            std::cout   << "viewDir = " << viewDirection
-                        << "; plane = " << *plane
-                        << "; intersection = " << intPt
-                        << std::endl;
-#endif // DEBUG
-           return true;
+            return true;
         }
     }
     
