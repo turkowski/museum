@@ -1357,8 +1357,8 @@ public:
         mInputBinding.add(InputBindingEvent::Web("__chrome", "navhome"), mInputResponses["webHome"]);
         mInputBinding.add(InputBindingEvent::Web("__chrome", "navgo", 1), mInputResponses["webGo"]);
         mInputBinding.add(InputBindingEvent::Web("__chrome", "navmoveforward", 1), mInputResponses["moveForward"]);
-        mInputBinding.add(InputBindingEvent::Web("__chrome", "navturnleft", 1), mInputResponses["rotateYPos"]);
-        mInputBinding.add(InputBindingEvent::Web("__chrome", "navturnright", 1), mInputResponses["rotateYNeg"]);
+        mInputBinding.add(InputBindingEvent::Web("__chrome", "navturnleft", 1), mInputResponses["stableRotatePos"]);
+        mInputBinding.add(InputBindingEvent::Web("__chrome", "navturnright", 1), mInputResponses["stableRotateNeg"]);
 
     //    mInputBinding.add(InputBindingEvent::Web("__chrome", "navcommand", 1), mInputResponses["webCommand"]);
         mInputBinding.add(InputBindingEvent::Web("__chrome", "navcommand", 1), mInputResponses["genericMessage"]);
