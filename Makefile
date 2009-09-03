@@ -30,7 +30,7 @@ clean:
 
 #========== Dependencies ===========
 
-dependencies:
+distributions:
 	case "`uname`" in \
 		*arwin*) \
 			svn co http://sirikataosx.googlecode.com/svn/trunk dependencies \
@@ -49,9 +49,9 @@ dependencies:
 			svn co http://sirikata.googlecode.com/svn/trunk/source dependencies \
 			;; \
 	esac ; \
-	[ -d dependencies ]
+	svn co http://sirikatamachindep.googlecode.com/svn/trunk/ dependencies/machindependencies
 
-update-dependencies: dependencies
+update-dependencies: distributions
 	git submodule init || true
 	git submodule update || true
 	cd dependencies && svn update
