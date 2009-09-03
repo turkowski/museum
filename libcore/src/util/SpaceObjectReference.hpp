@@ -131,7 +131,7 @@ class SpaceObjectReference : TotallyOrdered<SpaceObjectReference>{
 };
 
 inline std::ostream &operator << (std::ostream &os, const SpaceObjectReference&sor) {
-    os << sor.space() << ":" << sor.object();
+    os << sor.object() << ":" << sor.space();
     return os;
 }
 
